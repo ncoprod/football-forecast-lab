@@ -67,6 +67,7 @@ def main() -> None:
     predictions = []
     for event in round_events:
         event_id = str(event["id"])
+        external_market = optional_odds.get("matched_markets", {}).get(event_id)
         predictions.append(
             predict_match(
                 event,
@@ -75,6 +76,7 @@ def main() -> None:
                 elo_map,
                 league_news,
                 config,
+                external_market,
             )
         )
 

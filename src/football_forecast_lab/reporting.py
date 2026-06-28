@@ -52,11 +52,11 @@ def write_outputs(
     generated_at: datetime,
     config: dict[str, Any],
 ) -> None:
-    csv_path = OUTPUT_DIR / "mpp_pronostics_2026_16es.csv"
-    champion_csv_path = OUTPUT_DIR / "mpp_champion_simulation_2026.csv"
+    csv_path = OUTPUT_DIR / "match_predictions_2026_r32.csv"
+    champion_csv_path = OUTPUT_DIR / "champion_simulation_2026.csv"
     feature_store_path = OUTPUT_DIR / "feature_store_current_matches.csv"
-    json_path = OUTPUT_DIR / "mpp_pronostics_2026_16es_audit.json"
-    report_path = OUTPUT_DIR / "mpp_pronostics_2026_16es.md"
+    json_path = OUTPUT_DIR / "match_predictions_2026_r32_audit.json"
+    report_path = OUTPUT_DIR / "match_predictions_2026_r32.md"
 
     with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(
@@ -64,15 +64,16 @@ def write_outputs(
             fieldnames=[
                 "match_paris",
                 "match",
-                "prono_recommande",
+                "resultat_recommande",
+                "p_resultat_recommande",
+                "score_exact_recommande",
                 "confiance",
-                "risque",
+                "volatilite",
                 "p_score_exact",
                 "p_home_apres_prolong",
                 "p_draw_apres_prolong",
                 "p_away_apres_prolong",
-                "score_prudent",
-                "score_agressif",
+                "top_scores",
                 "cotes_marche",
                 "lambda_home_90",
                 "lambda_away_90",
@@ -89,15 +90,16 @@ def write_outputs(
                 {
                     "match_paris": pred["match_paris"],
                     "match": pred["match"],
-                    "prono_recommande": pred["recommended_score"],
+                    "resultat_recommande": pred["recommended_result"],
+                    "p_resultat_recommande": pct(pred["recommended_result_probability"]),
+                    "score_exact_recommande": pred["recommended_score"],
                     "confiance": pred["confidence"],
-                    "risque": pred["risk"],
+                    "volatilite": pred["risk"],
                     "p_score_exact": pct(pred["recommended_exact_probability"]),
                     "p_home_apres_prolong": pct(pred["final_outcomes"]["home"]),
                     "p_draw_apres_prolong": pct(pred["final_outcomes"]["draw"]),
                     "p_away_apres_prolong": pct(pred["final_outcomes"]["away"]),
-                    "score_prudent": pred["safe_score"],
-                    "score_agressif": pred["aggressive_score"],
+                    "top_scores": ", ".join(f"{item['score']} {pct(item['probability'])}" for item in pred["top_scores"][:5]),
                     "cotes_marche": pred["odds"].get("details", ""),
                     "lambda_home_90": fmt_float(pred["lambda_home_90"]),
                     "lambda_away_90": fmt_float(pred["lambda_away_90"]),
@@ -177,14 +179,14 @@ def build_report(
     config: dict[str, Any],
 ) -> str:
     lines: list[str] = []
-    lines.append("# Pronostics MPP - Coupe du monde 2026, 16es de finale")
+    lines.append("# Football Forecast Lab - Coupe du monde 2026, 16es de finale")
     lines.append("")
     lines.append(f"Genere le {generated_at.astimezone(PARIS_TZ).strftime('%Y-%m-%d %H:%M')} Europe/Paris.")
     lines.append("")
     lines.append("## Synthese rapide")
     lines.append("")
-    lines.append("| Date Paris | Match | Prono | Confiance | Score exact | Prudent | Agressif |")
-    lines.append("|---|---|---:|---|---:|---:|---:|")
+    lines.append("| Date Paris | Match | Resultat | P(resultat) | Score exact | P(score) | Confiance |")
+    lines.append("|---|---|---|---:|---:|---:|---|")
     for pred in predictions:
         lines.append(
             "| "
@@ -192,11 +194,11 @@ def build_report(
                 [
                     pred["match_paris"],
                     pred["match"],
+                    pred["recommended_result"],
+                    pct(pred["recommended_result_probability"]),
                     pred["recommended_score"],
-                    pred["confidence"],
                     pct(pred["recommended_exact_probability"]),
-                    pred["safe_score"],
-                    pred["aggressive_score"],
+                    pred["confidence"],
                 ]
             )
             + " |"
@@ -219,11 +221,11 @@ def build_report(
     lines.append("")
     lines.append("- Source principale: endpoints JSON ESPN FIFA World Cup 2026 pour calendrier, resultats, cotes, leaders, rosters et actus.")
     lines.append("- Source force equipe: fichiers TSV publics World Football Elo.")
-    lines.append("- Cotes externes optionnelles: The Odds API est branche via `THE_ODDS_API_KEY`; API-Football est documente via `API_FOOTBALL_KEY` mais non appele tant que le matching fixture live n'est pas verifie.")
+    lines.append("- Cotes externes optionnelles: The Odds API est branche via `THE_ODDS_API_KEY`; ses quotas sont lus dans les headers quand la cle est presente.")
     lines.append("- Modele: ajustement Poisson sur cotes 1N2 + total buts, puis nudges controles avec Elo, forme de groupe, repos et leaders joueurs.")
-    lines.append("- Knockout/MPP: le score recommande est simule apres prolongation quand le match est nul a 90 minutes; les tirs au but ne changent pas le score.")
+    lines.append("- Score exact: le score recommande est le score le plus probable dans la distribution finale avant tirs au but; les tirs au but ne changent pas le score.")
     lines.append("- Simulation champion: propagation exacte des probabilites dans le bracket ESPN; en cas de nul apres prolongation, les tirs au but sont alloues par force relative modele.")
-    lines.append("- Les coefficients MPP exacts ne sont pas publics dans ces sources; le scoring est configurable dans `work/mpp_worldcup_2026/mpp_config.json`.")
+    lines.append("- Le modele entraine historique reste un signal secondaire: il n'inclut pas encore les cotes historiques ni les compositions probables.")
     lines.append("")
     lines.append("Config active: `" + json.dumps(config, ensure_ascii=False) + "`")
     lines.append("")
@@ -239,12 +241,23 @@ def build_report(
         away_name = pred["away"]["name"]
         lines.append(f"### {pred['match_paris']} - {home_name} vs {away_name}")
         lines.append("")
-        lines.append(f"Prono recommande: **{pred['recommended_score']}** ({pred['confidence']}, risque {pred['risk']}).")
+        lines.append(
+            f"Resultat recommande: **{pred['recommended_result']}** "
+            f"({pct(pred['recommended_result_probability'])})."
+        )
+        lines.append(
+            f"Score exact recommande: **{pred['recommended_score']}** "
+            f"({pct(pred['recommended_exact_probability'])}, confiance {pred['confidence']}, volatilite {pred['risk']})."
+        )
         lines.append(
             "Probabilites apres prolongation: "
             f"{home_name} {pct(pred['final_outcomes']['home'])}, "
             f"nul {pct(pred['final_outcomes']['draw'])}, "
             f"{away_name} {pct(pred['final_outcomes']['away'])}."
+        )
+        lines.append(
+            "Probabilites modele ML historique: "
+            + format_ml_probabilities(pred)
         )
         lines.append(
             "Scores les plus probables: "
@@ -268,8 +281,22 @@ def build_report(
 
     lines.append("## Limites importantes")
     lines.append("")
-    lines.append("- Les cotes ESPN/DraftKings sont traitees comme une baseline marche; elles peuvent etre differentes des cotes MPP visibles dans ton app.")
+    lines.append("- Les cotes ESPN/DraftKings sont traitees comme une baseline marche; The Odds API renforce ce signal seulement si une cle locale est configuree.")
     lines.append("- Les actus sont integrees par headlines/categories ESPN, pas par scraping medical profond. Une annonce de composition a 1h du match doit etre verifiee manuellement.")
-    lines.append("- Deep learning non force: sans historique riche et comparable avec labels MPP, un reseau neuronal donnerait une fausse precision. Le modele probabiliste + marche est plus robuste ici.")
+    lines.append("- Deep learning non force: sans historique riche de scores, cotes et compositions comparables, un reseau neuronal donnerait une fausse precision. Le modele probabiliste + marche est plus robuste ici.")
     return "\n".join(lines) + "\n"
+
+
+def format_ml_probabilities(pred: dict[str, Any]) -> str:
+    trained_ml = pred.get("trained_ml") or {}
+    probabilities = trained_ml.get("probabilities") or {}
+    if not probabilities:
+        return "n/a."
+    home = pred["home"]["name"]
+    away = pred["away"]["name"]
+    return (
+        f"{home} {pct(probabilities.get('home'))}, "
+        f"nul {pct(probabilities.get('draw'))}, "
+        f"{away} {pct(probabilities.get('away'))}."
+    )
 

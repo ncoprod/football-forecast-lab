@@ -6,8 +6,12 @@ from datetime import datetime
 from typing import Any
 
 from .espn import event_competitors, extract_leaders, extract_news_notes, extract_odds
-from .settings import PARIS_TZ
-from .utils import parse_dt, safe_float
+from .settings import PARIS_TZ, TEAM_ALIASES
+from .utils import normalize_name, parse_dt, safe_float
+
+
+EXTERNAL_ODDS_WEIGHT = 0.65
+TEAM_ALIAS_KEYS = {normalize_name(key): normalize_name(value) for key, value in TEAM_ALIASES.items()}
 
 def poisson_pmf(lam: float, max_goals: int) -> list[float]:
     lam = max(lam, 0.01)
@@ -195,12 +199,14 @@ def predict_match(
     elo_map: dict[str, dict[str, Any]],
     league_news: dict[str, Any],
     config: dict[str, Any],
+    external_market: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     competitors = event_competitors(event)
     home = competitors["home"]
     away = competitors["away"]
     match_dt = parse_dt(event.get("date"))
     odds = extract_odds(event, summary)
+    odds = merge_external_odds(odds, external_market, home["name"], away["name"])
     market_lam_home, market_lam_away, fit_info = fit_market_lambdas(odds)
     leaders = extract_leaders(summary)
     lam_home, lam_away, adjustment = context_adjust_lambdas(
@@ -224,11 +230,9 @@ def predict_match(
     final_outcomes = outcome_probs(final_scores)
 
     ranked_scores = sorted(final_scores.items(), key=lambda item: item[1], reverse=True)
-    safe_score, safe_prob = ranked_scores[0]
-    recommended_score, recommended_prob, recommended_value = choose_mpp_score(
-        final_scores, final_outcomes, odds, config
-    )
-    aggressive_score, aggressive_prob = choose_aggressive_score(final_scores, final_outcomes, odds)
+    recommended_score, recommended_prob = ranked_scores[0]
+    recommended_result_key = max(final_outcomes, key=lambda outcome: final_outcomes[outcome])
+    regular_top_scores = sorted(regular_scores.items(), key=lambda item: item[1], reverse=True)
 
     news_notes = extract_news_notes(summary, league_news, home, away)
     confidence = confidence_label(final_outcomes, recommended_prob)
@@ -252,14 +256,17 @@ def predict_match(
         "recommended_score": score_text(recommended_score),
         "recommended_score_tuple": recommended_score,
         "recommended_exact_probability": recommended_prob,
-        "recommended_value": recommended_value,
-        "safe_score": score_text(safe_score),
-        "safe_exact_probability": safe_prob,
-        "aggressive_score": score_text(aggressive_score),
-        "aggressive_exact_probability": aggressive_prob,
+        "recommended_value": recommended_prob,
+        "recommended_result_key": recommended_result_key,
+        "recommended_result": result_label(recommended_result_key, home["name"], away["name"]),
+        "recommended_result_probability": final_outcomes[recommended_result_key],
         "top_scores": [
             {"score": score_text(score), "probability": prob}
             for score, prob in ranked_scores[:8]
+        ],
+        "regular_top_scores": [
+            {"score": score_text(score), "probability": prob}
+            for score, prob in regular_top_scores[:8]
         ],
         "confidence": confidence,
         "risk": risk,
@@ -274,52 +281,76 @@ def predict_match(
         "source_url": f"https://www.espn.com/soccer/match/_/gameId/{event.get('id')}",
     }
 
-def choose_mpp_score(
-    final_scores: dict[tuple[int, int], float],
-    final_outcomes: dict[str, float],
+def merge_external_odds(
     odds: dict[str, Any],
-    config: dict[str, Any],
-) -> tuple[tuple[int, int], float, float]:
-    fair = odds.get("moneyline_fair", {}) or {}
-    best: tuple[tuple[int, int], float, float] | None = None
-    for score, exact_prob in final_scores.items():
-        outcome = score_outcome(score)
-        outcome_prob = final_outcomes[outcome]
-        fair_result_prob = fair.get(outcome, outcome_prob)
-        leverage = 1.0 / max(fair_result_prob, 0.08)
-        value = (
-            float(config["exact_score_weight"]) * exact_prob
-            + float(config["result_weight"]) * outcome_prob * exact_prob
-            + float(config["underdog_boost"]) * exact_prob * math.log1p(leverage)
-        )
-        if best is None or value > best[2]:
-            best = (score, exact_prob, value)
-    assert best is not None
-    return best
+    external_market: dict[str, Any] | None,
+    home_name: str,
+    away_name: str,
+) -> dict[str, Any]:
+    if not external_market:
+        return odds
 
-def choose_aggressive_score(
-    final_scores: dict[tuple[int, int], float],
-    final_outcomes: dict[str, float],
-    odds: dict[str, Any],
-) -> tuple[tuple[int, int], float]:
-    fair = odds.get("moneyline_fair", {}) or {}
-    ranked = sorted(final_scores.items(), key=lambda item: item[1], reverse=True)
-    safe_score = ranked[0][0]
-    top_prob = ranked[0][1]
-    candidates = []
-    for score, prob in ranked[:25]:
-        if score == safe_score:
-            continue
-        if prob < top_prob * 0.35:
-            continue
-        outcome = score_outcome(score)
-        leverage = 1.0 / max(fair.get(outcome, final_outcomes[outcome]), 0.08)
-        exact_rarity = top_prob / max(prob, 0.001)
-        candidates.append((prob * (leverage ** 0.42) * (exact_rarity ** 0.18), score, prob))
-    if not candidates:
-        return ranked[1] if len(ranked) > 1 else ranked[0]
-    _, score, prob = max(candidates, key=lambda item: item[0])
-    return score, prob
+    merged = dict(odds)
+    mapped_h2h = map_external_h2h(external_market.get("h2h_fair", {}), home_name, away_name)
+    if {"home", "draw", "away"}.issubset(mapped_h2h):
+        base_h2h = merged.get("moneyline_fair", {}) or {}
+        if {"home", "draw", "away"}.issubset(base_h2h):
+            blended = {
+                key: EXTERNAL_ODDS_WEIGHT * mapped_h2h[key] + (1.0 - EXTERNAL_ODDS_WEIGHT) * base_h2h[key]
+                for key in ("home", "draw", "away")
+            }
+        else:
+            blended = mapped_h2h
+        merged["moneyline_fair"] = normalize_probability_dict(blended)
+        merged["external_h2h_fair"] = mapped_h2h
+
+    totals = external_market.get("totals_fair", {}) or {}
+    if totals.get("line") and totals.get("over") is not None:
+        base_over = merged.get("over_fair")
+        if base_over is None:
+            merged["over_fair"] = totals["over"]
+            merged["total_line"] = totals["line"]
+        elif abs(float(merged.get("total_line") or totals["line"]) - float(totals["line"])) <= 0.25:
+            merged["over_fair"] = EXTERNAL_ODDS_WEIGHT * totals["over"] + (1.0 - EXTERNAL_ODDS_WEIGHT) * base_over
+            merged["total_line"] = totals["line"]
+        merged["external_totals_fair"] = totals
+
+    merged["provider"] = f"{merged.get('provider', 'market')} + The Odds API"
+    merged["details"] = " | ".join(part for part in [merged.get("details", ""), "The Odds API multi-book"] if part)
+    return merged
+
+
+def map_external_h2h(prices: dict[str, float], home_name: str, away_name: str) -> dict[str, float]:
+    mapped: dict[str, float] = {}
+    home_key = canonical_team_key(home_name)
+    away_key = canonical_team_key(away_name)
+    for name, probability in prices.items():
+        normalized = canonical_team_key(name)
+        if same_team_name(normalized, home_key):
+            mapped["home"] = probability
+        elif same_team_name(normalized, away_key):
+            mapped["away"] = probability
+        elif normalized in {"draw", "tie"}:
+            mapped["draw"] = probability
+    return mapped
+
+
+def canonical_team_key(value: str) -> str:
+    normalized = normalize_name(value)
+    return TEAM_ALIAS_KEYS.get(normalized, normalized)
+
+
+def same_team_name(left: str, right: str) -> bool:
+    compact_left = left.replace(" and ", " ").replace(" ", "")
+    compact_right = right.replace(" and ", " ").replace(" ", "")
+    return left == right or compact_left == compact_right
+
+
+def normalize_probability_dict(values: dict[str, float]) -> dict[str, float]:
+    total = sum(values.values())
+    if total <= 0:
+        return values
+    return {key: value / total for key, value in values.items()}
 
 def score_outcome(score: tuple[int, int]) -> str:
     if score[0] > score[1]:
@@ -330,6 +361,14 @@ def score_outcome(score: tuple[int, int]) -> str:
 
 def score_text(score: tuple[int, int]) -> str:
     return f"{score[0]}-{score[1]}"
+
+
+def result_label(result_key: str, home_name: str, away_name: str) -> str:
+    if result_key == "home":
+        return f"{home_name} gagne"
+    if result_key == "away":
+        return f"{away_name} gagne"
+    return "Nul"
 
 def confidence_label(outcomes: dict[str, float], exact_prob: float) -> str:
     sorted_outcomes = sorted(outcomes.values(), reverse=True)
@@ -346,8 +385,8 @@ def risk_label(outcomes: dict[str, float], score: tuple[int, int]) -> str:
     outcome = score_outcome(score)
     p = outcomes[outcome]
     if p >= 0.62:
-        return "prudent"
+        return "faible"
     if p >= 0.48:
-        return "equilibre"
-    return "agressif"
+        return "moyenne"
+    return "elevee"
 

@@ -22,9 +22,6 @@ PARIS_TZ = ZoneInfo("Europe/Paris")
 USER_AGENT = "Codex football analyst/1.0 (+local personal use)"
 
 DEFAULT_CONFIG = {
-    "result_weight": 0.45,
-    "exact_score_weight": 1.0,
-    "underdog_boost": 0.07,
     "extra_time_goal_factor": 0.30,
 }
 

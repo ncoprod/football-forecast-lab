@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     build_dashboard(
-        REPO_ROOT / "outputs" / "mpp_pronostics_2026_16es_audit.json",
+        REPO_ROOT / "outputs" / "match_predictions_2026_r32_audit.json",
         REPO_ROOT / "outputs" / "football_forecast_dashboard.html",
     )
 

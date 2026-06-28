@@ -1,1 +1,1 @@
-"""World Cup prediction pipeline for MPP and general bracket analysis."""
+"""World Cup prediction pipeline for score, result and bracket analysis."""

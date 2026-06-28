@@ -6,10 +6,10 @@ from pathlib import Path
 
 
 def validate_outputs(output_dir: Path) -> None:
-    audit = read_json(output_dir / "mpp_pronostics_2026_16es_audit.json")
+    audit = read_json(output_dir / "match_predictions_2026_r32_audit.json")
     predictions = audit["predictions"]
     advancement = audit["tournament"]["advancement"]
-    champion_rows = read_csv(output_dir / "mpp_champion_simulation_2026.csv")
+    champion_rows = read_csv(output_dir / "champion_simulation_2026.csv")
 
     if len(predictions) != 16:
         raise AssertionError(f"Expected 16 Round-of-32 predictions, got {len(predictions)}")

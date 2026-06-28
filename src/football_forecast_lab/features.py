@@ -31,6 +31,8 @@ def prediction_feature_rows(predictions: list[dict[str, Any]]) -> list[dict[str,
                 "p_home_after_extra": pred["final_outcomes"]["home"],
                 "p_draw_after_extra": pred["final_outcomes"]["draw"],
                 "p_away_after_extra": pred["final_outcomes"]["away"],
+                "recommended_result": pred["recommended_result_key"],
+                "recommended_result_probability": pred["recommended_result_probability"],
                 "recommended_score": pred["recommended_score"],
                 "recommended_exact_probability": pred["recommended_exact_probability"],
             }
