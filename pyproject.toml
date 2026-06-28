@@ -9,6 +9,15 @@ description = "Football score, MPP and tournament forecasting pipeline."
 requires-python = ">=3.11"
 dependencies = []
 
+[project.optional-dependencies]
+ml = [
+    "lightgbm>=4.5",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "scikit-learn>=1.5",
+    "scipy>=1.14",
+]
+
 [project.scripts]
 football-forecast = "football_forecast_lab.pipeline:main"
 
@@ -17,4 +26,3 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-

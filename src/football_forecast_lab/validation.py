@@ -21,6 +21,22 @@ def validate_outputs(output_dir: Path) -> None:
         raise AssertionError("Missing trained ML audit")
     if any("forecast_status" not in prediction for prediction in predictions):
         raise AssertionError("Missing forecast status on at least one prediction")
+    required_prediction_keys = {
+        "model_version",
+        "score_distribution_90",
+        "score_distribution_after_extra",
+        "calibrated_probabilities",
+        "no_bet_reason",
+        "stake_eur",
+    }
+    for prediction in predictions:
+        missing = required_prediction_keys - set(prediction)
+        if missing:
+            raise AssertionError(f"Prediction {prediction.get('event_id')} missing keys: {sorted(missing)}")
+        for key in ("score_distribution_90", "score_distribution_after_extra"):
+            total = sum(float(item["probability"]) for item in prediction[key])
+            if abs(total - 1.0) > 1e-9:
+                raise AssertionError(f"{key} does not normalize for {prediction.get('event_id')}: {total}")
 
     expected_round_totals = {
         "reach_r16": 16.0,

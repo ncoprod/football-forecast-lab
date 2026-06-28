@@ -6,11 +6,12 @@ from datetime import datetime
 from typing import Any
 
 from .espn import event_competitors, extract_leaders, extract_news_notes, extract_odds
-from .settings import PARIS_TZ, TEAM_ALIASES
+from .settings import MODEL_VERSION, PARIS_TZ, TEAM_ALIASES
 from .utils import normalize_name, parse_dt, safe_float
 
 
 EXTERNAL_ODDS_WEIGHT = 0.65
+DEFAULT_DIXON_COLES_RHO = -0.08
 TEAM_ALIAS_KEYS = {normalize_name(key): normalize_name(value) for key, value in TEAM_ALIASES.items()}
 
 def poisson_pmf(lam: float, max_goals: int) -> list[float]:
@@ -25,6 +26,30 @@ def score_distribution(lam_home: float, lam_away: float, max_goals: int = 10) ->
     home_pmf = poisson_pmf(lam_home, max_goals)
     away_pmf = poisson_pmf(lam_away, max_goals)
     return {(h, a): home_pmf[h] * away_pmf[a] for h in range(max_goals + 1) for a in range(max_goals + 1)}
+
+def dixon_coles_score_distribution(
+    lam_home: float,
+    lam_away: float,
+    rho: float = DEFAULT_DIXON_COLES_RHO,
+    max_goals: int = 10,
+) -> dict[tuple[int, int], float]:
+    """Apply a modest Dixon-Coles correction to low scores, then renormalize."""
+    base = score_distribution(lam_home, lam_away, max_goals)
+    adjusted: dict[tuple[int, int], float] = {}
+    for score, probability in base.items():
+        h, a = score
+        factor = 1.0
+        if h == 0 and a == 0:
+            factor = 1.0 - lam_home * lam_away * rho
+        elif h == 0 and a == 1:
+            factor = 1.0 + lam_home * rho
+        elif h == 1 and a == 0:
+            factor = 1.0 + lam_away * rho
+        elif h == 1 and a == 1:
+            factor = 1.0 - rho
+        adjusted[score] = probability * max(0.05, factor)
+    total = sum(adjusted.values())
+    return {score: probability / total for score, probability in adjusted.items()}
 
 def outcome_probs(scores: dict[tuple[int, int], float]) -> dict[str, float]:
     home = sum(prob for (h, a), prob in scores.items() if h > a)
@@ -201,6 +226,7 @@ def predict_match(
     config: dict[str, Any],
     external_market: dict[str, Any] | None = None,
     generated_at: datetime | None = None,
+    api_football_enrichment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     competitors = event_competitors(event)
     home = competitors["home"]
@@ -222,7 +248,7 @@ def predict_match(
         leaders,
     )
 
-    regular_scores = score_distribution(lam_home, lam_away, 10)
+    regular_scores = dixon_coles_score_distribution(lam_home, lam_away, max_goals=10)
     regular_outcomes = outcome_probs(regular_scores)
     final_scores = final_score_distribution_with_extra_time(
         lam_home,
@@ -231,17 +257,20 @@ def predict_match(
     )
     final_outcomes = outcome_probs(final_scores)
 
-    ranked_scores = sorted(final_scores.items(), key=lambda item: item[1], reverse=True)
-    recommended_score, recommended_prob = ranked_scores[0]
-    recommended_result_key = max(final_outcomes, key=lambda outcome: final_outcomes[outcome])
-    regular_top_scores = sorted(regular_scores.items(), key=lambda item: item[1], reverse=True)
+    regular_ranked_scores = sorted(regular_scores.items(), key=lambda item: item[1], reverse=True)
+    final_ranked_scores = sorted(final_scores.items(), key=lambda item: item[1], reverse=True)
+    recommended_score_90, recommended_prob_90 = regular_ranked_scores[0]
+    recommended_score_after_extra, recommended_prob_after_extra = final_ranked_scores[0]
+    recommended_result_key = max(regular_outcomes, key=lambda outcome: regular_outcomes[outcome])
+    recommended_advancement_result_key = max(final_outcomes, key=lambda outcome: final_outcomes[outcome])
 
     news_notes = extract_news_notes(summary, league_news, home, away)
-    confidence = confidence_label(final_outcomes, recommended_prob)
-    risk = risk_label(final_outcomes, recommended_score)
+    confidence = confidence_label(regular_outcomes, recommended_prob_90)
+    risk = risk_label(regular_outcomes, recommended_score_90)
 
     return {
         "event_id": str(event.get("id")),
+        "model_version": MODEL_VERSION,
         "match_utc": match_dt.isoformat() if match_dt else "",
         "match_paris": match_dt.astimezone(PARIS_TZ).strftime("%Y-%m-%d %H:%M") if match_dt else "",
         "forecast_status": "pre_match" if is_pre_match else "after_kickoff_or_unknown",
@@ -250,6 +279,7 @@ def predict_match(
         "away": away,
         "match": f"{home['name']} - {away['name']}",
         "odds": odds,
+        "api_football": api_football_enrichment or {},
         "fit_info": fit_info,
         "lambda_home_90": lam_home,
         "lambda_away_90": lam_away,
@@ -257,20 +287,44 @@ def predict_match(
         "market_lambda_away_90": market_lam_away,
         "regular_outcomes": regular_outcomes,
         "final_outcomes": final_outcomes,
-        "recommended_score": score_text(recommended_score),
-        "recommended_score_tuple": recommended_score,
-        "recommended_exact_probability": recommended_prob,
-        "recommended_value": recommended_prob,
+        "calibrated_probabilities": regular_outcomes,
+        "score_distribution_90": serialize_score_distribution(regular_scores),
+        "score_distribution_after_extra": serialize_score_distribution(final_scores),
+        "recommended_score": score_text(recommended_score_90),
+        "recommended_score_tuple": recommended_score_90,
+        "recommended_exact_probability": recommended_prob_90,
+        "recommended_score_90": score_text(recommended_score_90),
+        "recommended_score_90_tuple": recommended_score_90,
+        "recommended_exact_probability_90": recommended_prob_90,
+        "recommended_score_after_extra": score_text(recommended_score_after_extra),
+        "recommended_score_after_extra_tuple": recommended_score_after_extra,
+        "recommended_exact_probability_after_extra": recommended_prob_after_extra,
+        "score_top1_mass_90": top_score_mass(regular_ranked_scores, 1),
+        "score_top3_mass_90": top_score_mass(regular_ranked_scores, 3),
+        "score_top5_mass_90": top_score_mass(regular_ranked_scores, 5),
+        "score_top1_mass_after_extra": top_score_mass(final_ranked_scores, 1),
+        "score_top3_mass_after_extra": top_score_mass(final_ranked_scores, 3),
+        "score_top5_mass_after_extra": top_score_mass(final_ranked_scores, 5),
+        "recommended_value": recommended_prob_90,
         "recommended_result_key": recommended_result_key,
         "recommended_result": result_label(recommended_result_key, home["name"], away["name"]),
-        "recommended_result_probability": final_outcomes[recommended_result_key],
+        "recommended_result_probability": regular_outcomes[recommended_result_key],
+        "recommended_advancement_result_key": recommended_advancement_result_key,
+        "recommended_advancement_result": result_label(recommended_advancement_result_key, home["name"], away["name"]),
+        "recommended_advancement_probability": final_outcomes[recommended_advancement_result_key],
+        "no_bet_reason": no_bet_reason(is_pre_match, regular_outcomes, odds),
+        "stake_eur": stake_eur(is_pre_match, regular_outcomes, odds),
         "top_scores": [
             {"score": score_text(score), "probability": prob}
-            for score, prob in ranked_scores[:8]
+            for score, prob in regular_ranked_scores[:8]
         ],
-        "regular_top_scores": [
+        "top_scores_90": [
             {"score": score_text(score), "probability": prob}
-            for score, prob in regular_top_scores[:8]
+            for score, prob in regular_ranked_scores[:8]
+        ],
+        "top_scores_after_extra": [
+            {"score": score_text(score), "probability": prob}
+            for score, prob in final_ranked_scores[:8]
         ],
         "confidence": confidence,
         "risk": risk,
@@ -355,6 +409,37 @@ def normalize_probability_dict(values: dict[str, float]) -> dict[str, float]:
     if total <= 0:
         return values
     return {key: value / total for key, value in values.items()}
+
+def serialize_score_distribution(scores: dict[tuple[int, int], float]) -> list[dict[str, Any]]:
+    return [
+        {
+            "score": score_text(score),
+            "home_goals": score[0],
+            "away_goals": score[1],
+            "probability": probability,
+        }
+        for score, probability in sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    ]
+
+def top_score_mass(ranked_scores: list[tuple[tuple[int, int], float]], k: int) -> float:
+    return sum(probability for _, probability in ranked_scores[:k])
+
+def no_bet_reason(is_pre_match: bool, outcomes: dict[str, float], odds: dict[str, Any]) -> str:
+    if not is_pre_match:
+        return "not_pre_match"
+    market = odds.get("moneyline_fair", {}) or {}
+    if not {"home", "draw", "away"}.issubset(market):
+        return "missing_market"
+    best = max(outcomes, key=lambda outcome: outcomes[outcome])
+    edge = outcomes[best] - market.get(best, outcomes[best])
+    if edge < 0.035:
+        return "edge_below_threshold"
+    if max(outcomes.values()) < 0.48:
+        return "low_confidence"
+    return ""
+
+def stake_eur(is_pre_match: bool, outcomes: dict[str, float], odds: dict[str, Any]) -> float:
+    return 0.10 if no_bet_reason(is_pre_match, outcomes, odds) == "" else 0.0
 
 def score_outcome(score: tuple[int, int]) -> str:
     if score[0] > score[1]:

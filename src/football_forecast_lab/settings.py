@@ -9,6 +9,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = REPO_ROOT / "configs"
 CACHE_DIR = REPO_ROOT / ".cache" / "football_forecast_lab"
 OUTPUT_DIR = REPO_ROOT / "outputs"
+LEDGER_DIR = OUTPUT_DIR / "ledger"
+BACKTEST_DIR = OUTPUT_DIR / "backtests"
+PAPER_BETS_DIR = OUTPUT_DIR / "paper_bets"
+
+MODEL_VERSION = "football-forecast-lab-v2"
 
 ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world"
 ELO_BASE = "https://www.eloratings.net"

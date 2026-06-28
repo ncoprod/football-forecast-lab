@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 
@@ -17,6 +17,9 @@ DEFAULT_THE_ODDS_REGIONS = "eu,uk"
 DEFAULT_THE_ODDS_MARKETS = "h2h,totals"
 
 API_FOOTBALL_ODDS_URL = "https://v3.football.api-sports.io/odds?league=1&season=2026"
+API_FOOTBALL_BASE_URL = "https://v3.football.api-sports.io"
+API_FOOTBALL_LEAGUE_ID = "1"
+API_FOOTBALL_SEASON = "2026"
 
 
 def load_local_env() -> None:
@@ -35,7 +38,7 @@ def load_local_env() -> None:
             os.environ[key] = value
 
 
-def collect_optional_odds(round_events: list[dict[str, Any]]) -> dict[str, Any]:
+def collect_optional_odds(round_events: list[dict[str, Any]], generated_at: datetime | None = None) -> dict[str, Any]:
     """Fetch optional external odds when free-tier API keys are present."""
     load_local_env()
     sources = {
@@ -44,7 +47,7 @@ def collect_optional_odds(round_events: list[dict[str, Any]]) -> dict[str, Any]:
             "note": "Used directly from ESPN event JSON when available.",
         },
         "the_odds_api": fetch_the_odds_api(round_events),
-        "api_football": fetch_api_football_status(),
+        "api_football": fetch_api_football(round_events, generated_at),
         "football_data_org": {
             "status": "not_odds_source",
             "note": "Free fixtures/results API; no free odds endpoint used here.",
@@ -54,7 +57,11 @@ def collect_optional_odds(round_events: list[dict[str, Any]]) -> dict[str, Any]:
             "note": "Useful for historical fixtures/results, not live odds.",
         },
     }
-    return {"sources": sources, "matched_markets": sources["the_odds_api"].get("matched_markets", {})}
+    return {
+        "sources": sources,
+        "matched_markets": sources["the_odds_api"].get("matched_markets", {}),
+        "api_football_enrichment": sources["api_football"].get("matched_fixtures", {}),
+    }
 
 
 def fetch_the_odds_api(round_events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -107,7 +114,7 @@ def extract_the_odds_quota(headers: dict[str, str]) -> dict[str, int]:
     }
 
 
-def fetch_api_football_status() -> dict[str, Any]:
+def fetch_api_football(round_events: list[dict[str, Any]], generated_at: datetime | None) -> dict[str, Any]:
     api_key = os.environ.get("API_FOOTBALL_KEY") or os.environ.get("API_SPORTS_KEY")
     if not api_key:
         return {
@@ -115,11 +122,131 @@ def fetch_api_football_status() -> dict[str, Any]:
             "env_var": "API_FOOTBALL_KEY",
             "note": "API-SPORTS/API-Football odds require a key. The endpoint is wired as documentation/status, not called without a key.",
         }
+
+    window = api_football_date_window(round_events)
+    if window is None:
+        return {"status": "no_round_events", "env_var": "API_FOOTBALL_KEY"}
+
+    fixtures_url = build_api_football_url(
+        "fixtures",
+        {
+            "league": API_FOOTBALL_LEAGUE_ID,
+            "season": API_FOOTBALL_SEASON,
+            "from": window[0],
+            "to": window[1],
+        },
+    )
+    try:
+        data, _, from_cache = fetch_json_with_meta(
+            fixtures_url,
+            "api_football_fixtures_worldcup_2026_r32.json",
+            headers={"x-apisports-key": api_key},
+        )
+    except Exception as exc:
+        return {"status": "error", "env_var": "API_FOOTBALL_KEY", "error": str(exc)}
+
+    response_rows = data.get("response", []) if isinstance(data, dict) else []
+    matches = match_api_football_fixtures(round_events, response_rows)
+    detail_status = enrich_api_football_details(matches, generated_at, api_key)
+    status = "ok" if response_rows else "ok_no_fixtures"
     return {
-        "status": "configured_not_called",
+        "status": status,
         "env_var": "API_FOOTBALL_KEY",
-        "note": "Key detected. Fixture-id matching is intentionally not enabled until verified against the live API response shape.",
+        "from_cache": from_cache,
+        "window": {"from": window[0], "to": window[1]},
+        "fixtures_returned": len(response_rows),
+        "matches_found": len(matches),
+        "matched_fixtures": matches,
+        "detail_calls": detail_status,
+        "note": "Fixture mapping is enabled. Detail calls are limited and only run when API_FOOTBALL_ENABLE_DETAIL_CALLS=1.",
         "endpoint": API_FOOTBALL_ODDS_URL,
+    }
+
+
+def build_api_football_url(path: str, params: dict[str, Any]) -> str:
+    return f"{API_FOOTBALL_BASE_URL}/{path}?{urlencode(params)}"
+
+
+def api_football_date_window(round_events: list[dict[str, Any]]) -> tuple[str, str] | None:
+    dates = [parse_dt(event.get("date")) for event in round_events]
+    dates = [date for date in dates if date]
+    if not dates:
+        return None
+    start = min(dates).date().isoformat()
+    end = max(dates).date().isoformat()
+    return start, end
+
+
+def match_api_football_fixtures(round_events: list[dict[str, Any]], fixtures: list[dict[str, Any]]) -> dict[str, Any]:
+    matches: dict[str, Any] = {}
+    for event in round_events:
+        competitors = event.get("competitions", [{}])[0].get("competitors", [])
+        names = [canonical_team_name((item.get("team") or {}).get("displayName", "")) for item in competitors]
+        match_dt = parse_dt(event.get("date"))
+        for row in fixtures:
+            teams = row.get("teams", {})
+            home = canonical_team_name((teams.get("home") or {}).get("name", ""))
+            away = canonical_team_name((teams.get("away") or {}).get("name", ""))
+            fixture_dt = parse_dt((row.get("fixture") or {}).get("date"))
+            if home not in names or away not in names:
+                continue
+            if match_dt and fixture_dt and abs(match_dt - fixture_dt) > timedelta(hours=8):
+                continue
+            fixture = row.get("fixture") or {}
+            matches[str(event.get("id"))] = {
+                "fixture_id": fixture.get("id"),
+                "date": fixture.get("date"),
+                "status": (fixture.get("status") or {}).get("short", ""),
+                "home_team": (teams.get("home") or {}).get("name"),
+                "away_team": (teams.get("away") or {}).get("name"),
+                "injuries": [],
+                "lineups": [],
+                "player_stats": [],
+            }
+            break
+    return matches
+
+
+def enrich_api_football_details(matches: dict[str, Any], generated_at: datetime | None, api_key: str) -> dict[str, Any]:
+    if os.environ.get("API_FOOTBALL_ENABLE_DETAIL_CALLS") != "1":
+        return {"status": "disabled", "calls_made": 0, "env_var": "API_FOOTBALL_ENABLE_DETAIL_CALLS"}
+    call_limit = safe_int(os.environ.get("API_FOOTBALL_DETAIL_CALL_LIMIT"), 12)
+    calls_made = 0
+    for event_id, match in matches.items():
+        if calls_made >= call_limit:
+            break
+        fixture_id = match.get("fixture_id")
+        match_dt = parse_dt(match.get("date"))
+        if not fixture_id or (generated_at and match_dt and generated_at >= match_dt):
+            continue
+        for endpoint, target_key in (
+            ("injuries", "injuries"),
+            ("fixtures/lineups", "lineups"),
+            ("fixtures/players", "player_stats"),
+        ):
+            if calls_made >= call_limit:
+                break
+            url = build_api_football_url(endpoint, {"fixture": fixture_id})
+            try:
+                data, _, from_cache = fetch_json_with_meta(
+                    url,
+                    f"api_football_{target_key}_{fixture_id}.json",
+                    headers={"x-apisports-key": api_key},
+                )
+            except Exception as exc:
+                match.setdefault("detail_errors", []).append({"endpoint": endpoint, "error": str(exc)})
+                continue
+            rows = data.get("response", []) if isinstance(data, dict) else []
+            match[target_key] = summarize_api_football_detail_rows(target_key, rows, from_cache)
+            calls_made += 1
+    return {"status": "ok", "calls_made": calls_made, "call_limit": call_limit}
+
+
+def summarize_api_football_detail_rows(target_key: str, rows: list[dict[str, Any]], from_cache: bool) -> dict[str, Any]:
+    return {
+        "from_cache": from_cache,
+        "count": len(rows),
+        "sample": rows[:3],
     }
 
 

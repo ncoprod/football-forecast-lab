@@ -67,13 +67,19 @@ def write_outputs(
                 "match",
                 "resultat_recommande",
                 "p_resultat_recommande",
-                "score_exact_recommande",
+                "score_90_recommande",
+                "p_score_90",
+                "score_apres_prolong_recommande",
+                "p_score_apres_prolong",
                 "confiance",
                 "volatilite",
-                "p_score_exact",
                 "p_home_apres_prolong",
                 "p_draw_apres_prolong",
                 "p_away_apres_prolong",
+                "top3_score_mass_90",
+                "top5_score_mass_90",
+                "no_bet_reason",
+                "stake_eur",
                 "top_scores",
                 "cotes_marche",
                 "lambda_home_90",
@@ -94,13 +100,19 @@ def write_outputs(
                     "match": pred["match"],
                     "resultat_recommande": pred["recommended_result"],
                     "p_resultat_recommande": pct(pred["recommended_result_probability"]),
-                    "score_exact_recommande": pred["recommended_score"],
+                    "score_90_recommande": pred["recommended_score_90"],
+                    "p_score_90": pct(pred["recommended_exact_probability_90"]),
+                    "score_apres_prolong_recommande": pred["recommended_score_after_extra"],
+                    "p_score_apres_prolong": pct(pred["recommended_exact_probability_after_extra"]),
                     "confiance": pred["confidence"],
                     "volatilite": pred["risk"],
-                    "p_score_exact": pct(pred["recommended_exact_probability"]),
                     "p_home_apres_prolong": pct(pred["final_outcomes"]["home"]),
                     "p_draw_apres_prolong": pct(pred["final_outcomes"]["draw"]),
                     "p_away_apres_prolong": pct(pred["final_outcomes"]["away"]),
+                    "top3_score_mass_90": pct(pred["score_top3_mass_90"]),
+                    "top5_score_mass_90": pct(pred["score_top5_mass_90"]),
+                    "no_bet_reason": pred["no_bet_reason"],
+                    "stake_eur": fmt_float(pred["stake_eur"]),
                     "top_scores": ", ".join(f"{item['score']} {pct(item['probability'])}" for item in pred["top_scores"][:5]),
                     "cotes_marche": pred["odds"].get("details", ""),
                     "lambda_home_90": fmt_float(pred["lambda_home_90"]),
@@ -187,8 +199,8 @@ def build_report(
     lines.append("")
     lines.append("## Synthese rapide")
     lines.append("")
-    lines.append("| Date Paris | Statut | Match | Resultat | P(resultat) | Score exact | P(score) | Confiance |")
-    lines.append("|---|---|---|---|---:|---:|---:|---|")
+    lines.append("| Date Paris | Statut | Match | Resultat 90 | P(resultat) | Score 90 | Score ap. prol. | Top3 90 | No bet |")
+    lines.append("|---|---|---|---|---:|---:|---:|---:|---|")
     for pred in predictions:
         lines.append(
             "| "
@@ -199,9 +211,10 @@ def build_report(
                     pred["match"],
                     pred["recommended_result"],
                     pct(pred["recommended_result_probability"]),
-                    pred["recommended_score"],
-                    pct(pred["recommended_exact_probability"]),
-                    pred["confidence"],
+                    pred["recommended_score_90"],
+                    pred["recommended_score_after_extra"],
+                    pct(pred["score_top3_mass_90"]),
+                    pred["no_bet_reason"] or "paper only",
                 ]
             )
             + " |"
@@ -226,7 +239,8 @@ def build_report(
     lines.append("- Source force equipe: fichiers TSV publics World Football Elo.")
     lines.append("- Cotes externes optionnelles: The Odds API est branche via `THE_ODDS_API_KEY`; ses quotas sont lus dans les headers quand la cle est presente.")
     lines.append("- Modele: ajustement Poisson sur cotes 1N2 + total buts, puis nudges controles avec Elo, forme de groupe, repos et leaders joueurs.")
-    lines.append("- Score exact: le score recommande est le score le plus probable dans la distribution finale avant tirs au but; les tirs au but ne changent pas le score.")
+    lines.append("- Score exact 90: le score recommande est le score le plus probable a 90 minutes, adapte aux marches score exact classiques.")
+    lines.append("- Score apres prolongation: publie separement pour formats coupe; il ne doit pas etre melange aux backtests score 90.")
     lines.append("- Simulation champion: propagation exacte des probabilites dans le bracket ESPN; en cas de nul apres prolongation, les tirs au but sont alloues par force relative modele.")
     lines.append("- Le modele entraine historique reste un signal secondaire: il n'inclut pas encore les cotes historiques ni les compositions probables.")
     lines.append("")
@@ -252,8 +266,12 @@ def build_report(
             f"({pct(pred['recommended_result_probability'])})."
         )
         lines.append(
-            f"Score exact recommande: **{pred['recommended_score']}** "
-            f"({pct(pred['recommended_exact_probability'])}, confiance {pred['confidence']}, volatilite {pred['risk']})."
+            f"Score exact 90 recommande: **{pred['recommended_score_90']}** "
+            f"({pct(pred['recommended_exact_probability_90'])}, confiance {pred['confidence']}, volatilite {pred['risk']})."
+        )
+        lines.append(
+            f"Score apres prolongation: **{pred['recommended_score_after_extra']}** "
+            f"({pct(pred['recommended_exact_probability_after_extra'])})."
         )
         lines.append(
             "Probabilites apres prolongation: "
@@ -269,6 +287,10 @@ def build_report(
             "Scores les plus probables: "
             + ", ".join(f"{item['score']} ({pct(item['probability'])})" for item in pred["top_scores"][:5])
             + "."
+        )
+        lines.append(
+            f"Paper betting: stake {fmt_float(pred['stake_eur'])} EUR; "
+            f"raison no-bet: {pred['no_bet_reason'] or 'paper only'}."
         )
         lines.append(f"Cotes marche ESPN/DraftKings: `{pred['odds'].get('details', 'n/a')}`.")
         lines.append(f"Forme groupe {home_name}: {format_group(pred['group_home'])}.")

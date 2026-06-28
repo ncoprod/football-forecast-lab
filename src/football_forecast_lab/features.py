@@ -13,6 +13,7 @@ def prediction_feature_rows(predictions: list[dict[str, Any]]) -> list[dict[str,
         rows.append(
             {
                 "event_id": pred["event_id"],
+                "model_version": pred["model_version"],
                 "match_paris": pred["match_paris"],
                 "forecast_status": pred["forecast_status"],
                 "home": home,
@@ -34,8 +35,14 @@ def prediction_feature_rows(predictions: list[dict[str, Any]]) -> list[dict[str,
                 "p_away_after_extra": pred["final_outcomes"]["away"],
                 "recommended_result": pred["recommended_result_key"],
                 "recommended_result_probability": pred["recommended_result_probability"],
-                "recommended_score": pred["recommended_score"],
-                "recommended_exact_probability": pred["recommended_exact_probability"],
+                "recommended_score_90": pred["recommended_score_90"],
+                "recommended_exact_probability_90": pred["recommended_exact_probability_90"],
+                "recommended_score_after_extra": pred["recommended_score_after_extra"],
+                "recommended_exact_probability_after_extra": pred["recommended_exact_probability_after_extra"],
+                "score_top3_mass_90": pred["score_top3_mass_90"],
+                "score_top5_mass_90": pred["score_top5_mass_90"],
+                "no_bet_reason": pred["no_bet_reason"],
+                "stake_eur": pred["stake_eur"],
             }
         )
     return rows

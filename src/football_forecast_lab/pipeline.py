@@ -63,7 +63,7 @@ def main() -> None:
     group_stats = build_group_stats(group_events)
     team_names = collect_round_teams(round_events)
     elo_map = load_elo_for_teams(team_names)
-    optional_odds = collect_optional_odds(round_events)
+    optional_odds = collect_optional_odds(round_events, generated_at)
 
     predictions = []
     for event in round_events:
@@ -71,6 +71,7 @@ def main() -> None:
         match_dt = parse_dt(event.get("date"))
         is_pre_match = bool(match_dt and generated_at < match_dt)
         external_market = optional_odds.get("matched_markets", {}).get(event_id) if is_pre_match else None
+        api_football_enrichment = optional_odds.get("api_football_enrichment", {}).get(event_id)
         predictions.append(
             predict_match(
                 event,
@@ -81,6 +82,7 @@ def main() -> None:
                 config,
                 external_market,
                 generated_at,
+                api_football_enrichment,
             )
         )
 

@@ -28,3 +28,18 @@ def reliability_bins(rows: list[dict[str, Any]], probability_key: str, actual_ke
 def shrink_to_market(model_probability: float, market_probability: float, model_weight: float) -> float:
     weight = max(0.0, min(1.0, model_weight))
     return weight * model_probability + (1.0 - weight) * market_probability
+
+
+def expected_calibration_error(bins: list[dict[str, float]]) -> float:
+    total = sum(bucket["count"] for bucket in bins)
+    if total <= 0:
+        return 0.0
+    return sum(
+        (bucket["count"] / total) * abs(bucket["mean_probability"] - bucket["observed_rate"])
+        for bucket in bins
+    )
+
+
+def is_monotone_calibration(bins: list[dict[str, float]]) -> bool:
+    observed = [bucket["observed_rate"] for bucket in bins if bucket["count"] > 0]
+    return all(left <= right for left, right in zip(observed, observed[1:]))

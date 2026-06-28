@@ -18,9 +18,16 @@ def redact_url(url: str) -> str:
     return re.sub(pattern, r"\1REDACTED", url, flags=re.IGNORECASE)
 
 
-def fetch_bytes_with_meta(url: str, cache_name: str) -> tuple[bytes, dict[str, str], bool]:
+def fetch_bytes_with_meta(
+    url: str,
+    cache_name: str,
+    headers: dict[str, str] | None = None,
+) -> tuple[bytes, dict[str, str], bool]:
     cache_path = CACHE_DIR / cache_name
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    request_headers = {"User-Agent": USER_AGENT}
+    if headers:
+        request_headers.update(headers)
+    req = urllib.request.Request(url, headers=request_headers)
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
             data = response.read()
@@ -41,8 +48,12 @@ def fetch_text(url: str, cache_name: str) -> str:
     data = fetch_bytes(url, cache_name)
     return data.decode("utf-8", errors="replace")
 
-def fetch_json_with_meta(url: str, cache_name: str) -> tuple[Any, dict[str, str], bool]:
-    data, headers, from_cache = fetch_bytes_with_meta(url, cache_name)
+def fetch_json_with_meta(
+    url: str,
+    cache_name: str,
+    headers: dict[str, str] | None = None,
+) -> tuple[Any, dict[str, str], bool]:
+    data, headers, from_cache = fetch_bytes_with_meta(url, cache_name, headers)
     return json.loads(data.decode("utf-8", errors="replace")), headers, from_cache
 
 
