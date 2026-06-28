@@ -1,17 +1,16 @@
 # Football Forecast Lab
 
-Forecasting lab for football score predictions, MPP-style recommendations and tournament simulation.
+Public football forecasting lab for match result, exact-score and tournament-winner probabilities.
 
-The current implementation targets the 2026 World Cup knockout stage, but the code is structured as a general pipeline:
+The current live target is the 2026 World Cup round of 32, but the code is structured as a reusable pipeline:
 
-- public ESPN data ingestion,
-- World Football Elo ingestion,
-- optional free-key odds connectors,
-- market-calibrated score model,
-- feature store export,
-- bracket simulation,
-- validation,
-- dashboard generation.
+- ESPN public data ingestion for fixtures, results, market odds, leaders and news
+- World Football Elo team-strength ingestion
+- optional The Odds API multi-book odds via a local free-tier key
+- market-calibrated Poisson score model with controlled context adjustments
+- historical softmax ML layer trained on international results since 2000
+- bracket propagation to estimate tournament winner probabilities
+- generated dashboard, public CSV snapshots and README charts
 
 ## Quick Start
 
@@ -19,31 +18,53 @@ The current implementation targets the 2026 World Cup knockout stage, but the co
 python .\scripts\refresh_once.py
 ```
 
-This runs the pipeline, validates outputs and builds the dashboard.
+This refreshes the live data, validates generated outputs and rebuilds the static dashboard.
 
-Outputs:
+Main local outputs:
 
-- `outputs/mpp_pronostics_2026_16es.md`
-- `outputs/mpp_pronostics_2026_16es.csv`
-- `outputs/mpp_champion_simulation_2026.csv`
+- `outputs/match_predictions_2026_r32.md`
+- `outputs/match_predictions_2026_r32.csv`
+- `outputs/champion_simulation_2026.csv`
 - `outputs/feature_store_current_matches.csv`
 - `outputs/football_forecast_dashboard.html`
-- `outputs/mpp_pronostics_2026_16es_audit.json`
+- `outputs/match_predictions_2026_r32_audit.json`
 
-## Optional API Keys
+Public snapshots copied into the repo live under `docs/generated/`.
 
-Copy `.env.example` to `.env` and add personal keys only if you have them.
+## Data Sources
+
+- [ESPN public soccer endpoints](https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard) for fixtures, summaries, market odds and news
+- [World Football Elo](https://www.eloratings.net/) for team-strength ratings
+- [The Odds API v4](https://the-odds-api.com/liveapi/guides/v4/) for optional multi-book h2h/totals odds and quota headers
+- [API-Football](https://www.api-football.com/) as the next keyed source for lineups, injuries, player stats and extra odds
+- [football-data.org](https://www.football-data.org/documentation/api) as a possible fixtures/results supplement, not a primary odds source
+
+## Secure API Keys
+
+Never paste API keys in chat, issues, commits or shell history. Use the local masked prompt:
 
 ```powershell
-Copy-Item .env.example .env
+.\scripts\set_secret.ps1 -Name THE_ODDS_API_KEY
 ```
 
-Supported optional keys:
+The script writes the value to `.env`, which is ignored by Git. Optional non-secret knobs:
 
-- `THE_ODDS_API_KEY`
-- `API_FOOTBALL_KEY`
+```powershell
+THE_ODDS_API_REGIONS=eu,uk
+THE_ODDS_API_MARKETS=h2h,totals
+```
 
-No secret is required for the baseline ESPN + Elo pipeline.
+The default request is intentionally modest for the free tier. The pipeline reads The Odds API quota headers when available and stores only counts such as remaining/used credits.
+
+## Refresh Loop
+
+For an aggressive local monitor with a quota safety stop:
+
+```powershell
+python .\scripts\watch_refresh.py --minutes 30 --min-odds-credits 25
+```
+
+With a 500-credit free monthly plan, do not run a high-cost odds call every few minutes for weeks. The practical pattern is frequent refresh near match windows, slower refresh outside them, and a hard minimum-credit stop.
 
 ## Validation
 
@@ -52,17 +73,87 @@ python .\scripts\train_ml.py
 python -m compileall -q .\src .\scripts .\tests
 python -m unittest discover -s tests
 python .\scripts\validate_outputs.py
+python .\scripts\build_readme_assets.py
 ```
 
 ## Model
 
-The active live model is market-calibrated and now also exports an advisory trained ML layer:
+The live model is market-calibrated first and ML-assisted second:
 
-1. convert 1X2 and totals odds into fair probabilities,
-2. fit a Poisson score distribution,
-3. adjust with Elo, group form, rest and player leaders,
-4. simulate extra time and penalties for advancement,
-5. propagate the official bracket.
-6. attach a trained historical softmax model as a secondary signal.
+1. convert 1X2 and totals odds into fair probabilities
+2. blend optional multi-book odds when a local key is configured
+3. fit a Poisson score distribution
+4. adjust modestly with Elo, group form, rest and player leaders
+5. simulate extra time for knockout matches, before penalties
+6. attach historical ML probabilities as an advisory signal
+7. propagate the bracket to champion probabilities
 
-See `MODEL_CARD.md` and `docs/ROADMAP_15.md`.
+The recommended exact score is simply the most likely score in the distribution. No app-specific optimizer or league strategy is applied.
+
+## Betting-Agent Direction
+
+This repo is a decision-support lab, not an automatic real-money betting bot. A future bankroll agent should start with paper trading, stake caps, daily loss limits, model-vs-market edge thresholds, quota tracking and human confirmation before any real-money action.
+
+Exact scorer forecasts are a separate, harder model: they need expected minutes, lineups, injuries/suspensions, penalty and set-piece roles, recent shot/xG volume and player prop odds. Until those inputs are reliable, publishing scorer picks would be fake precision.
+
+See `MODEL_CARD.md` and `docs/ROADMAP_15.md` for the current model limits and next steps.
+
+<!-- forecast-snapshot:start -->
+
+## Public Snapshot
+
+![Exact score probabilities](docs/assets/exact_score_probabilities.svg)
+
+![Champion probabilities](docs/assets/champion_probabilities.svg)
+
+![ML backtest log loss](docs/assets/ml_backtest_log_loss.svg)
+
+Generated UTC: `2026-06-28T20:17:23.607511+00:00`
+
+## Match Forecasts
+
+| Match | Result | P(result) | Exact score | P(score) |
+|---|---|---:|---:|---:|
+| South Africa - Canada | Canada gagne | 60.9% | 0-1 | 16.9% |
+| Brazil - Japan | Brazil gagne | 65.0% | 1-0 | 16.0% |
+| Germany - Paraguay | Germany gagne | 80.2% | 2-0 | 14.0% |
+| Netherlands - Morocco | Netherlands gagne | 51.3% | 1-0 | 14.7% |
+| Ivory Coast - Norway | Norway gagne | 54.8% | 0-1 | 12.1% |
+| France - Sweden | France gagne | 84.4% | 2-0 | 12.6% |
+| Mexico - Ecuador | Mexico gagne | 54.4% | 1-0 | 19.8% |
+| England - Congo DR | England gagne | 82.6% | 1-0 | 16.5% |
+| Belgium - Senegal | Belgium gagne | 51.2% | 1-0 | 15.5% |
+| United States - Bosnia-Herzegovina | United States gagne | 75.6% | 1-0 | 14.3% |
+| Spain - Austria | Spain gagne | 81.2% | 1-0 | 15.5% |
+| Portugal - Croatia | Portugal gagne | 61.1% | 1-0 | 14.9% |
+| Switzerland - Algeria | Switzerland gagne | 61.7% | 1-0 | 15.4% |
+| Australia - Egypt | Egypt gagne | 45.2% | 0-1 | 17.4% |
+| Argentina - Cape Verde | Argentina gagne | 89.7% | 2-0 | 16.6% |
+| Colombia - Ghana | Colombia gagne | 71.2% | 1-0 | 18.5% |
+
+## Tournament Simulation
+
+| Rank | Team | Champion | Final | Semi |
+|---:|---|---:|---:|---:|
+| 1 | Argentina | 25.5% | 40.4% | 67.5% |
+| 2 | France | 18.3% | 28.8% | 47.1% |
+| 3 | Spain | 18.3% | 34.4% | 53.2% |
+| 4 | Brazil | 9.7% | 21.1% | 38.1% |
+| 5 | Germany | 9.4% | 22.5% | 43.7% |
+| 6 | England | 6.1% | 12.5% | 26.3% |
+| 7 | Portugal | 3.3% | 9.1% | 18.9% |
+| 8 | Netherlands | 2.1% | 4.8% | 11.1% |
+| 9 | Mexico | 1.8% | 4.3% | 10.9% |
+| 10 | Switzerland | 1.1% | 3.4% | 11.4% |
+
+## Historical ML Backtest
+
+Rows: train `18164`, validation `3581`, test `3670`.
+
+| Model | Accuracy | Brier | Log loss |
+|---|---:|---:|---:|
+| Softmax ML | 0.606 | 0.510 | 0.868 |
+| Elo baseline | 0.605 | 0.542 | 0.926 |
+| Majority baseline | 0.472 | 0.636 | 1.054 |
+
+<!-- forecast-snapshot:end -->

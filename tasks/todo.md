@@ -1,8 +1,8 @@
 # Task
-- Goal: turn the football forecasting prototype into a clean GitHub-ready repo and implement the 15-step roadmap as code, scaffolding, docs and validation.
-- Scope: local Python pipeline, optional odds connectors, model/backtest scaffolding, dashboard generation, tests, Git/GitHub init.
-- Non-goals: creating accounts or storing API secrets; claiming trained ML quality without a historical training dataset.
-- Risks: external API shape drift, missing API keys, limited player-level data, no historical odds archive bundled yet.
+- Goal: make the forecast lab public-ready, secure optional API key setup, remove MPP-specific optimization, and publish readable results/backtests in the README.
+- Scope: local Python pipeline, optional odds connectors, score/result reporting, README charts/assets, docs, tests, Git/GitHub visibility.
+- Non-goals: placing real-money bets automatically; scraping proprietary MPP coefficients; storing or printing API secrets.
+- Risks: external API shape drift, missing user-owned API keys, limited player-level data, no historical odds archive bundled yet.
 
 ## Plan
 - [x] Explore current project and tool auth
@@ -10,9 +10,15 @@
 - [x] Add roadmap modules for metrics, features, history, backtest, calibration, ensemble, strategy, refresh and dashboard
 - [x] Run pipeline and validations
 - [x] Initialize Git/GitHub
+- [x] Add secure local secret setup and redact secret-bearing URLs
+- [x] Wire The Odds API quota headers and multi-book h2h/totals blending
+- [x] Replace MPP optimization outputs with plain result + exact-score forecasts
+- [x] Generate public README charts and result/backtest snapshot
+- [x] Run training, refresh, tests and output validation
+- [ ] Commit, push, and switch the GitHub repo to public
 
 ## Review / Results
-- Commands run: `python .\scripts\refresh_once.py`; `python -m compileall -q .\src .\scripts .\tests`; `python -m unittest discover -s tests`; `python .\scripts\validate_outputs.py`.
-- Evidence: 16 predictions, 32 tournament teams, valid advancement probability totals, dashboard and feature store generated. GitHub repo created at `https://github.com/ncoprod/football-forecast-lab`.
-- Risks / rollback: optional odds connectors need user-owned API keys; trained ML requires a historical dataset before claims can be made.
-- Follow-ups: add The Odds API key, add historical odds/player dataset, then run real backtests and calibrate trained models.
+- Commands run: `python .\scripts\train_ml.py`; `python .\scripts\refresh_once.py`; `python .\scripts\build_readme_assets.py`; `python -m compileall -q .\src .\scripts .\tests`; `python -m unittest discover -s tests`; `python .\scripts\validate_outputs.py`; `git diff --check`.
+- Evidence: 16 predictions, 32 tournament teams, valid advancement probability totals, dashboard generated, README SVG charts generated, public CSV snapshots copied to `docs/generated/`, and 8 tests pass.
+- Risks / rollback: The Odds API live blending is unverified until a user-owned key is added; scorer/buteur modeling remains intentionally disabled until structured player inputs exist.
+- Follow-ups: add `THE_ODDS_API_KEY` locally, refresh once to verify quota headers/matched markets, then consider API-Football for lineups/injuries.

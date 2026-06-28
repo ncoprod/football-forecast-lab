@@ -7,6 +7,7 @@ The live decision model is market-calibrated and probabilistic. A first trained 
 It combines:
 
 - ESPN/DraftKings market odds,
+- optional The Odds API multi-book odds,
 - World Football Elo,
 - group-stage form,
 - rest days,
@@ -36,7 +37,8 @@ The next trained model should likely be LightGBM or CatBoost, then calibrated. D
 
 ## Current limitations
 
-- Multi-book odds require optional personal API keys.
+- Multi-book odds require optional personal API keys stored only in local `.env`.
 - No bundled historical odds archive yet.
 - Player form is limited to ESPN tournament leaders.
-- MPP proprietary scoring coefficients are configurable, not scraped.
+- Exact scorer/player prop forecasts are not active yet; they need lineups, expected minutes, injuries and player prop odds before they are worth publishing.
+- This repo is a decision-support lab, not an automatic real-money betting bot.

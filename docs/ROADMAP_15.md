@@ -10,7 +10,7 @@ Implemented: log loss, Brier score, accuracy and score top-k helpers in `metrics
 
 ## 3. Multi-book odds
 
-Implemented: optional The Odds API connector via `THE_ODDS_API_KEY`; API-Football key status wired via `API_FOOTBALL_KEY`.
+Implemented: optional The Odds API connector via `THE_ODDS_API_KEY`, quota headers, h2h/totals normalization and live blending with ESPN/DraftKings.
 
 Blocked without user-owned keys: live external odds calls.
 
@@ -58,13 +58,13 @@ Implemented: reliability-bin and market-shrink helpers in `calibration.py`.
 
 Implemented: weighted probability blending in `ensemble.py`.
 
-## 11. MPP optimizer
+## 11. Score/result recommendation
 
-Implemented: configurable score value function and safe/balanced/aggressive outputs.
+Implemented: the recommended result is the most likely 1/N/2 outcome; the recommended exact score is the highest-probability score in the final-score distribution before penalties.
 
-## 12. League strategy
+## 12. Bankroll and betting-agent guardrails
 
-Implemented: strategy labels and rank-gap policy helpers in `strategy.py`.
+Planned: a paper-trading ledger, stake caps, daily loss limit, cooldown rules, model-vs-market edge thresholds and human confirmation before any real-money bet.
 
 ## 13. Player data
 
@@ -72,12 +72,14 @@ Implemented: ESPN leader extraction and news risk terms.
 
 Next: add structured lineups/injuries from a keyed provider.
 
+Future scorer model: only publish buteur forecasts after expected minutes, penalty/set-piece roles, recent shot/xG volume, injury status and player prop odds are available.
+
 ## 14. Refresh automation
 
 Implemented:
 
 - `scripts/refresh_once.py`
-- `scripts/watch_refresh.py --minutes 30`
+- `scripts/watch_refresh.py --minutes 30 --min-odds-credits 25`
 - `scripts/refresh_once.ps1`
 
 ## 15. Dashboard

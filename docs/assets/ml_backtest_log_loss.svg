@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220" role="img">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="24" y="34" font-size="22" font-weight="700" fill="#111827">Historical test backtest</text>
+<text x="24" y="58" font-size="13" fill="#4b5563">Lower log loss is better</text>
+<text x="24" y="102" font-size="13" fill="#111827">Softmax ML</text><rect x="235" y="84" width="515" height="22" rx="4" fill="#e5e7eb"/><rect x="235" y="84" width="424" height="22" rx="4" fill="#7c3aed"/><text x="876" y="100" text-anchor="end" font-size="12" fill="#374151">log loss 0.868</text>
+<text x="24" y="136" font-size="13" fill="#111827">Elo baseline</text><rect x="235" y="118" width="515" height="22" rx="4" fill="#e5e7eb"/><rect x="235" y="118" width="452" height="22" rx="4" fill="#7c3aed"/><text x="876" y="134" text-anchor="end" font-size="12" fill="#374151">log loss 0.926</text>
+<text x="24" y="170" font-size="13" fill="#111827">Majority baseline</text><rect x="235" y="152" width="515" height="22" rx="4" fill="#e5e7eb"/><rect x="235" y="152" width="515" height="22" rx="4" fill="#7c3aed"/><text x="876" y="168" text-anchor="end" font-size="12" fill="#374151">log loss 1.054</text>
+</svg>
