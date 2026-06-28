@@ -26,15 +26,15 @@ Implemented: `outputs/feature_store_current_matches.csv`.
 
 ## 6. Backtest
 
-Implemented: metric evaluator in `backtest.py`.
+Implemented: leakage-safe ledger evaluator in `backtest.py` and `scripts/backtest_models.py`.
 
-Blocked: needs historical rows with pre-match probabilities and final scores.
+Blocked for live metrics: needs resolved ledger rows with pre-match probabilities and final scores.
 
 ## 7. Better score model
 
-Implemented: Poisson baseline with extra-time modelling.
+Implemented: Dixon-Coles-adjusted 90-minute score distribution plus separate after-extra-time distribution.
 
-Next: Dixon-Coles low-score correction once historical fitting data exists.
+Next: fit Dixon-Coles parameters from richer historical odds/score data instead of using a conservative global default.
 
 ## 8. Trained ML
 
@@ -48,11 +48,11 @@ Current test performance from latest run:
 - Elo baseline log loss: 0.9263
 - majority baseline log loss: 1.0537
 
-Next: add historical odds and train CatBoost/LightGBM.
+Next: add historical odds and train LightGBM/scikit-learn models through the optional `.[ml]` dependency set.
 
 ## 9. Calibration
 
-Implemented: reliability-bin and market-shrink helpers in `calibration.py`.
+Implemented: reliability-bin, ECE, monotonicity and market-shrink helpers in `calibration.py`; `scripts/calibrate_models.py` writes the current report.
 
 ## 10. Ensemble
 
@@ -60,17 +60,21 @@ Implemented: weighted probability blending in `ensemble.py`.
 
 ## 11. Score/result recommendation
 
-Implemented: the recommended result is the most likely 1/N/2 outcome; the recommended exact score is the highest-probability score in the final-score distribution before penalties.
+Implemented: the recommended result is the most likely 90-minute 1/N/2 outcome; the recommended exact score is the highest-probability 90-minute score. After-extra-time scores are published separately.
 
 ## 12. Bankroll and betting-agent guardrails
 
-Planned: a paper-trading ledger, stake caps, daily loss limit, cooldown rules, model-vs-market edge thresholds and human confirmation before any real-money bet.
+Implemented: `scripts/paper_bet.py` writes a conservative paper ledger with stake caps and no-bet reasons.
+
+Next: evaluate paper results after resolved matches before any real-money automation.
 
 ## 13. Player data
 
 Implemented: ESPN leader extraction and news risk terms.
 
-Next: add structured lineups/injuries from a keyed provider.
+Implemented: API-Football fixture mapping with optional quota-protected detail calls for injuries, lineups and player stats.
+
+Blocked: API-Football currently returns no 2026 fixtures for the tested World Cup window.
 
 Future scorer model: only publish buteur forecasts after expected minutes, penalty/set-piece roles, recent shot/xG volume, injury status and player prop odds are available.
 

@@ -12,7 +12,8 @@ It combines:
 - group-stage form,
 - rest days,
 - ESPN tournament player leaders,
-- Poisson score distributions,
+- Dixon-Coles-adjusted 90-minute score distributions,
+- separate after-extra-time distributions for knockout formats,
 - extra-time and bracket simulation.
 - historical softmax regression trained on international results since 2000.
 
@@ -33,12 +34,13 @@ Further ML becomes more useful after adding:
 - score/result labels,
 - tournament stage and context.
 
-The next trained model should likely be LightGBM or CatBoost, then calibrated. Deep learning should come later, only with enough player/event/xG history.
+The next trained model should likely be LightGBM/scikit-learn tabular modelling, then calibrated. Deep learning should come later, only with enough player/event/xG history.
 
 ## Current limitations
 
 - Multi-book odds require optional personal API keys stored only in local `.env`.
 - No bundled historical odds archive yet.
 - Player form is limited to ESPN tournament leaders.
+- API-Football detail enrichment is implemented but only useful when the provider returns fixtures for the target competition/window.
 - Exact scorer/player prop forecasts are not active yet; they need lineups, expected minutes, injuries and player prop odds before they are worth publishing.
 - This repo is a decision-support lab, not an automatic real-money betting bot.

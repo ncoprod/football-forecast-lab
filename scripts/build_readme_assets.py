@@ -52,14 +52,18 @@ def publish_csv_outputs() -> None:
         src = OUTPUT_DIR / name
         if src.exists():
             shutil.copyfile(src, GENERATED_DIR / name)
+    for name in ("rolling_origin_report.md", "calibration_report.md"):
+        src = OUTPUT_DIR / "backtests" / name
+        if src.exists():
+            shutil.copyfile(src, GENERATED_DIR / name)
 
 
 def write_exact_score_chart(audit: dict[str, Any], path: Path) -> None:
     items = [
         (
             short_label(pred["match"], 30),
-            float(pred["recommended_exact_probability"]),
-            f"{pred['recommended_score']} - {pct(pred['recommended_exact_probability'])}",
+            float(pred["recommended_exact_probability_90"]),
+            f"{pred['recommended_score_90']} - {pct(pred['recommended_exact_probability_90'])}",
         )
         for pred in audit["predictions"]
     ]
@@ -173,13 +177,13 @@ def build_results_markdown(audit: dict[str, Any], ml_result: dict[str, Any], inc
     lines.append("")
     lines.append("## Match Forecasts")
     lines.append("")
-    lines.append("| Match | Status | Result | P(result) | Exact score | P(score) |")
+    lines.append("| Match | Status | Result 90 | P(result) | Score 90 | P(score) |")
     lines.append("|---|---|---|---:|---:|---:|")
     for pred in audit["predictions"]:
         lines.append(
             f"| {pred['match']} | {pred['forecast_status']} | {pred['recommended_result']} | "
-            f"{pct(pred['recommended_result_probability'])} | {pred['recommended_score']} | "
-            f"{pct(pred['recommended_exact_probability'])} |"
+            f"{pct(pred['recommended_result_probability'])} | {pred['recommended_score_90']} | "
+            f"{pct(pred['recommended_exact_probability_90'])} |"
         )
     lines.append("")
     lines.append("## Tournament Simulation")
