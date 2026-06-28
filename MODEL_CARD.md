@@ -2,7 +2,7 @@
 
 ## Current model
 
-This is a market-calibrated probabilistic model, not a trained deep-learning model.
+The live decision model is market-calibrated and probabilistic. A first trained ML layer is also included as an advisory signal.
 
 It combines:
 
@@ -13,6 +13,7 @@ It combines:
 - ESPN tournament player leaders,
 - Poisson score distributions,
 - extra-time and bracket simulation.
+- historical softmax regression trained on international results since 2000.
 
 ## Why this is the right baseline
 
@@ -20,7 +21,9 @@ Football betting markets encode a large amount of current information. A simple 
 
 ## What would make ML worthwhile
 
-Trainable ML becomes useful after building a historical dataset with pre-match-only features:
+The first ML pass is implemented with chronological pre-match features. It improves log loss/Brier over simple baselines, but it still lacks historical odds and player availability.
+
+Further ML becomes more useful after adding:
 
 - historical odds,
 - Elo/FIFA ranking before match,
@@ -29,7 +32,7 @@ Trainable ML becomes useful after building a historical dataset with pre-match-o
 - score/result labels,
 - tournament stage and context.
 
-The first trained model should likely be LightGBM or CatBoost, then calibrated. Deep learning should come later, only with enough player/event/xG history.
+The next trained model should likely be LightGBM or CatBoost, then calibrated. Deep learning should come later, only with enough player/event/xG history.
 
 ## Current limitations
 

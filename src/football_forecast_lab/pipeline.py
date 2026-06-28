@@ -20,6 +20,7 @@ from .settings import (
     load_config,
 )
 from .tournament import simulate_tournament
+from .trained_layer import enrich_predictions_with_ml
 
 
 def load_round_of_32_events(scoreboard: dict) -> list[dict]:
@@ -77,5 +78,6 @@ def main() -> None:
             )
         )
 
+    trained_ml_status = enrich_predictions_with_ml(predictions)
     tournament = simulate_tournament(predictions, knockout_scoreboard)
-    write_outputs(predictions, group_stats, elo_map, tournament, optional_odds, generated_at, config)
+    write_outputs(predictions, group_stats, elo_map, tournament, optional_odds, trained_ml_status, generated_at, config)

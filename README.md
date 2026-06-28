@@ -48,6 +48,7 @@ No secret is required for the baseline ESPN + Elo pipeline.
 ## Validation
 
 ```powershell
+python .\scripts\train_ml.py
 python -m compileall -q .\src .\scripts .\tests
 python -m unittest discover -s tests
 python .\scripts\validate_outputs.py
@@ -55,12 +56,13 @@ python .\scripts\validate_outputs.py
 
 ## Model
 
-The active model is not a trained neural network. It is a market-calibrated probabilistic model:
+The active live model is market-calibrated and now also exports an advisory trained ML layer:
 
 1. convert 1X2 and totals odds into fair probabilities,
 2. fit a Poisson score distribution,
 3. adjust with Elo, group form, rest and player leaders,
 4. simulate extra time and penalties for advancement,
 5. propagate the official bracket.
+6. attach a trained historical softmax model as a secondary signal.
 
 See `MODEL_CARD.md` and `docs/ROADMAP_15.md`.

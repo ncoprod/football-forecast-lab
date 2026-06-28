@@ -48,6 +48,7 @@ def write_outputs(
     elo_map: dict[str, dict[str, Any]],
     tournament: dict[str, Any],
     optional_odds: dict[str, Any],
+    trained_ml_status: dict[str, Any],
     generated_at: datetime,
     config: dict[str, Any],
 ) -> None:
@@ -160,16 +161,18 @@ def write_outputs(
         "predictions": predictions,
         "tournament": tournament,
         "optional_odds": optional_odds,
+        "trained_ml": trained_ml_status,
         "group_stats": serialize_datetimes(group_stats),
         "elo_map": elo_map,
     }
     json_path.write_text(json.dumps(serialize_datetimes(audit_payload), ensure_ascii=False, indent=2), encoding="utf-8")
-    report_path.write_text(build_report(predictions, tournament, optional_odds, generated_at, config), encoding="utf-8")
+    report_path.write_text(build_report(predictions, tournament, optional_odds, trained_ml_status, generated_at, config), encoding="utf-8")
 
 def build_report(
     predictions: list[dict[str, Any]],
     tournament: dict[str, Any],
     optional_odds: dict[str, Any],
+    trained_ml_status: dict[str, Any],
     generated_at: datetime,
     config: dict[str, Any],
 ) -> str:
@@ -225,6 +228,8 @@ def build_report(
     lines.append("Config active: `" + json.dumps(config, ensure_ascii=False) + "`")
     lines.append("")
     lines.append("Statut sources odds: `" + json.dumps(optional_odds.get("sources", {}), ensure_ascii=False) + "`")
+    lines.append("")
+    lines.append("Statut ML entraine: `" + json.dumps(trained_ml_status, ensure_ascii=False) + "`")
     lines.append("")
     lines.append("## Details par match")
     lines.append("")

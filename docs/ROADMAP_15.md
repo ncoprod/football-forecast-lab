@@ -38,9 +38,17 @@ Next: Dixon-Coles low-score correction once historical fitting data exists.
 
 ## 8. Trained ML
 
-Implemented: package seams for feature rows and backtest.
+Implemented: first softmax regression model trained on historical international results since 2000.
 
-Not claimed: no trained model is shipped because there is no validated historical training set yet.
+Current test performance from latest run:
+
+- softmax log loss: 0.8683
+- softmax Brier: 0.5103
+- softmax accuracy: 0.6060
+- Elo baseline log loss: 0.9263
+- majority baseline log loss: 1.0537
+
+Next: add historical odds and train CatBoost/LightGBM.
 
 ## 9. Calibration
 

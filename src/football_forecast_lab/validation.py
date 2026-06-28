@@ -17,6 +17,8 @@ def validate_outputs(output_dir: Path) -> None:
         raise AssertionError(f"Expected 32 tournament teams, got {len(champion_rows)}")
     if "optional_odds" not in audit:
         raise AssertionError("Missing optional odds source audit")
+    if "trained_ml" not in audit:
+        raise AssertionError("Missing trained ML audit")
 
     expected_round_totals = {
         "reach_r16": 16.0,
