@@ -7,31 +7,34 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from football_forecast_lab.calibration import expected_calibration_error, is_monotone_calibration, reliability_bins
-from football_forecast_lab.ledger import load_jsonl, validate_ledger_rows
+from football_forecast_lab.backtest import final_result_probabilities
+from football_forecast_lab.ledger import attach_resolved_results, load_jsonl, load_resolved_results, validate_ledger_rows
 from football_forecast_lab.settings import BACKTEST_DIR, LEDGER_DIR
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build calibration report from resolved pre-match ledger rows.")
     parser.add_argument("--ledger", type=Path, default=LEDGER_DIR / "pre_match_predictions.jsonl")
+    parser.add_argument("--results", type=Path, default=LEDGER_DIR / "resolved_results.jsonl")
     parser.add_argument("--output", type=Path, default=BACKTEST_DIR / "calibration_report.md")
     args = parser.parse_args()
 
     rows = load_jsonl(args.ledger)
+    resolved_results = load_resolved_results(args.results)
     validate_ledger_rows(rows)
-    resolved_rows = calibration_rows(rows)
+    resolved_rows = calibration_rows(rows, resolved_results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(build_report(resolved_rows), encoding="utf-8")
     print(f"OK: wrote {args.output}")
 
 
-def calibration_rows(rows: list[dict]) -> list[dict]:
+def calibration_rows(rows: list[dict], resolved_results: dict[str, dict] | None = None) -> list[dict]:
     output = []
-    for row in rows:
+    for row in attach_resolved_results(rows, resolved_results):
         if row.get("actual_home_score") is None or row.get("actual_away_score") is None:
             continue
         actual = actual_outcome(row)
-        probabilities = row.get("calibrated_probabilities") or row.get("probabilities") or {}
+        probabilities = final_result_probabilities(row)
         for outcome in ("home", "draw", "away"):
             if outcome in probabilities:
                 output.append(
@@ -54,7 +57,7 @@ def actual_outcome(row: dict) -> str:
 
 
 def build_report(rows: list[dict]) -> str:
-    lines = ["# Calibration Report", ""]
+    lines = ["# Calibration Report", "", "Scope: final match result joined from `resolved_results.jsonl`.", ""]
     if not rows:
         lines.extend(
             [

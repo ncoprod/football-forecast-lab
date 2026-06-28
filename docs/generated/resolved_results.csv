@@ -1,0 +1,2 @@
+﻿resolved_at_utc,event_id,match_utc,home,away,actual_home_score,actual_away_score,actual_score_scope,actual_result,status,status_detail,source
+2026-06-28T22:53:38.374908+00:00,760486,2026-06-28T19:00:00+00:00,South Africa,Canada,0,1,espn_final_score,away,STATUS_FULL_TIME,FT,espn_scoreboard

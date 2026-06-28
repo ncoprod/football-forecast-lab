@@ -1,13 +1,15 @@
 # Rolling-Origin Backtest Report
 
 This report only accepts clean pre-match ledger rows. Rows generated at or after kickoff are rejected.
+Final scores are joined from a separate immutable results ledger; pre-match predictions are never edited.
 
 Ledger: `C:\Users\nicoc\Documents\Codex\2026-06-28\je\outputs\ledger\pre_match_predictions.jsonl`
-Rows: `30`; resolved: `0`; pending: `30`.
+Results: `C:\Users\nicoc\Documents\Codex\2026-06-28\je\outputs\ledger\resolved_results.jsonl`
+Rows: `60` across `15` events; resolved rows: `0` across `0` events; pending rows: `60` across `15` events.
 
 ## Ledger Metrics
 
-No resolved pre-match ledger rows yet. Keep capturing snapshots before kickoff, then add final scores to evaluate them.
+No resolved pre-match ledger rows yet. Keep capturing snapshots before kickoff, then resolve final scores after full time.
 
 ## Historical ML Outcome Backtest
 

@@ -21,9 +21,15 @@
 - [x] Add Dixon-Coles 90-minute score distribution and separate after-extra-time output
 - [x] Add leakage-safe backtest, calibration, score-model and paper-bet scripts
 - [x] Wire API-Football fixture mapping with quota-protected detail calls
+- [x] Add separate append-only resolved-results ledger
+- [x] Add ESPN result resolver for completed matches
+- [x] Join pre-match predictions with resolved results during backtest/calibration
+- [x] Add one-score MPP-style picks view using after-extra-time score scope
+- [x] Add full matchday cycle orchestration script
+- [x] Regenerate public reports, README assets and validation outputs
 
 ## Review / Results
-- Commands run: `python .\scripts\train_ml.py`; `python .\scripts\refresh_once.py`; `python .\scripts\backtest_models.py`; `python .\scripts\calibrate_models.py`; `python .\scripts\paper_bet.py`; `python .\scripts\train_score_model.py`; `python .\scripts\build_readme_assets.py`; `python -m compileall -q .\src .\scripts .\tests`; `python -m unittest discover -s tests`; `python .\scripts\validate_outputs.py`; `git diff --check`.
-- Evidence: 16 predictions, 32 tournament teams, normalized 90/after-extra score distributions, ledger rows captured only for pre-match predictions, reports generated under `outputs/backtests`, paper ledger generated, public CSV snapshots copied to `docs/generated/`, 12 tests pass, and GitHub visibility is `PUBLIC`.
-- Risks / rollback: API-Football key works but returns no fixtures for the tested 2026 World Cup window; scorer/buteur modeling remains intentionally disabled until structured player inputs exist; live ledger rows are not resolved until matches finish.
+- Commands run: `python .\scripts\train_ml.py`; `python .\scripts\refresh_once.py`; `python .\scripts\run_matchday_cycle.py`; `python .\scripts\resolve_results.py`; `python .\scripts\backtest_models.py`; `python .\scripts\calibrate_models.py`; `python .\scripts\paper_bet.py`; `python .\scripts\build_mpp_picks.py`; `python .\scripts\train_score_model.py`; `python .\scripts\build_readme_assets.py`; `python -m compileall -q .\src .\scripts .\tests`; `python -m unittest discover -s tests`; `python .\scripts\validate_outputs.py`; `git diff --check`.
+- Evidence: 16 predictions, 32 tournament teams, normalized 90/after-extra score distributions, ledger rows captured only for pre-match predictions, South Africa 0-1 Canada resolved in `outputs/ledger/resolved_results.jsonl`, reports generated under `outputs/backtests`, MPP one-score picks generated, paper ledger generated, public snapshots copied to `docs/generated/`, 16 tests pass, and GitHub visibility is `PUBLIC`.
+- Risks / rollback: API-Football key works but returns no fixtures for the tested 2026 World Cup window; scorer/buteur modeling remains intentionally disabled until structured player inputs exist; the first resolved match was not captured as a clean pre-match ledger row, so live rolling metrics remain pending until current clean snapshots finish.
 - Follow-ups: add final scores to ledger after matches, evaluate calibration/CLV, then only consider real-money micro-stakes if paper betting beats baselines without leakage.

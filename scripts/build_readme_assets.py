@@ -48,6 +48,8 @@ def publish_csv_outputs() -> None:
         "champion_simulation_2026.csv",
         "feature_store_current_matches.csv",
         "ml_training_report.md",
+        "mpp_picks_current.csv",
+        "mpp_picks_current.md",
     ):
         src = OUTPUT_DIR / name
         if src.exists():
@@ -56,6 +58,9 @@ def publish_csv_outputs() -> None:
         src = OUTPUT_DIR / "backtests" / name
         if src.exists():
             shutil.copyfile(src, GENERATED_DIR / name)
+    resolved_results = OUTPUT_DIR / "ledger" / "resolved_results.csv"
+    if resolved_results.exists():
+        shutil.copyfile(resolved_results, GENERATED_DIR / "resolved_results.csv")
 
 
 def write_exact_score_chart(audit: dict[str, Any], path: Path) -> None:
@@ -215,6 +220,16 @@ def build_results_markdown(audit: dict[str, Any], ml_result: dict[str, Any], inc
     lines.append(f"| Elo baseline | {elo['accuracy']:.3f} | {elo['brier_score']:.3f} | {elo['log_loss']:.3f} |")
     lines.append(f"| Majority baseline | {majority['accuracy']:.3f} | {majority['brier_score']:.3f} | {majority['log_loss']:.3f} |")
     lines.append("")
+    if (GENERATED_DIR / "mpp_picks_current.md").exists():
+        lines.append("## MPP-Style Picks")
+        lines.append("")
+        lines.append("Current single-score picks are published in [`docs/generated/mpp_picks_current.md`](docs/generated/mpp_picks_current.md).")
+        lines.append("")
+    if (GENERATED_DIR / "resolved_results.csv").exists():
+        lines.append("## Resolved Results")
+        lines.append("")
+        lines.append("Resolved final scores used for live evaluation are published in [`docs/generated/resolved_results.csv`](docs/generated/resolved_results.csv).")
+        lines.append("")
     return "\n".join(lines)
 
 

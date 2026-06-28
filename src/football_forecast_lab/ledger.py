@@ -13,6 +13,8 @@ from .utils import parse_dt
 PRE_MATCH_JSONL = "pre_match_predictions.jsonl"
 PRE_MATCH_CSV = "pre_match_predictions.csv"
 ODDS_JSONL = "odds_snapshots.jsonl"
+RESOLVED_RESULTS_JSONL = "resolved_results.jsonl"
+RESOLVED_RESULTS_CSV = "resolved_results.csv"
 
 
 def append_pre_match_snapshots(audit: dict[str, Any], ledger_dir: Path = LEDGER_DIR) -> dict[str, int]:
@@ -48,12 +50,18 @@ def pre_match_prediction_rows(audit: dict[str, Any]) -> list[dict[str, Any]]:
                     "draw": prediction.get("regular_outcomes", {}).get("draw"),
                     "away": prediction.get("regular_outcomes", {}).get("away"),
                 },
+                "advancement_probabilities": {
+                    "home": prediction.get("final_outcomes", {}).get("home"),
+                    "draw": prediction.get("final_outcomes", {}).get("draw"),
+                    "away": prediction.get("final_outcomes", {}).get("away"),
+                },
                 "calibrated_probabilities": prediction.get("calibrated_probabilities", {}),
                 "score_distribution_90": prediction.get("score_distribution_90", []),
                 "score_distribution_after_extra": prediction.get("score_distribution_after_extra", []),
                 "top_scores_90": prediction.get("top_scores_90", []),
                 "top_scores_after_extra": prediction.get("top_scores_after_extra", []),
                 "recommended_result": prediction.get("recommended_result_key"),
+                "recommended_advancement_result": prediction.get("recommended_advancement_result_key"),
                 "recommended_score_90": prediction.get("recommended_score_90"),
                 "recommended_score_after_extra": prediction.get("recommended_score_after_extra"),
                 "no_bet_reason": prediction.get("no_bet_reason", ""),
@@ -166,6 +174,67 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
             if line.strip():
                 rows.append(json.loads(line))
     return rows
+
+
+def append_resolved_results(rows: list[dict[str, Any]], ledger_dir: Path = LEDGER_DIR) -> dict[str, int]:
+    """Append newly completed match results without rewriting prior facts."""
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    existing = load_resolved_results(ledger_dir / RESOLVED_RESULTS_JSONL)
+    new_rows = [row for row in rows if str(row.get("event_id")) not in existing]
+    append_jsonl(ledger_dir / RESOLVED_RESULTS_JSONL, new_rows)
+    append_results_csv(ledger_dir / RESOLVED_RESULTS_CSV, new_rows)
+    return {"input_rows": len(rows), "appended_rows": len(new_rows), "skipped_existing": len(rows) - len(new_rows)}
+
+
+def append_results_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+    exists = path.exists()
+    fieldnames = [
+        "resolved_at_utc",
+        "event_id",
+        "match_utc",
+        "home",
+        "away",
+        "actual_home_score",
+        "actual_away_score",
+        "actual_score_scope",
+        "actual_result",
+        "status",
+        "status_detail",
+        "source",
+    ]
+    with path.open("a", encoding="utf-8-sig", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        if not exists:
+            writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key) for key in fieldnames})
+
+
+def load_resolved_results(path: Path) -> dict[str, dict[str, Any]]:
+    results: dict[str, dict[str, Any]] = {}
+    for row in load_jsonl(path):
+        event_id = str(row.get("event_id", ""))
+        if event_id:
+            results[event_id] = row
+    return results
+
+
+def attach_resolved_results(
+    rows: list[dict[str, Any]],
+    resolved_results: dict[str, dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    if not resolved_results:
+        return [dict(row) for row in rows]
+    merged_rows = []
+    for row in rows:
+        merged = dict(row)
+        result = resolved_results.get(str(row.get("event_id")))
+        if result:
+            merged.update(result)
+        merged_rows.append(merged)
+    return merged_rows
 
 
 def validate_ledger_rows(rows: list[dict[str, Any]]) -> None:
