@@ -15,10 +15,10 @@
 - [x] Replace MPP optimization outputs with plain result + exact-score forecasts
 - [x] Generate public README charts and result/backtest snapshot
 - [x] Run training, refresh, tests and output validation
-- [ ] Commit, push, and switch the GitHub repo to public
+- [x] Commit, push, and switch the GitHub repo to public
 
 ## Review / Results
 - Commands run: `python .\scripts\train_ml.py`; `python .\scripts\refresh_once.py`; `python .\scripts\build_readme_assets.py`; `python -m compileall -q .\src .\scripts .\tests`; `python -m unittest discover -s tests`; `python .\scripts\validate_outputs.py`; `git diff --check`.
-- Evidence: 16 predictions, 32 tournament teams, valid advancement probability totals, dashboard generated, README SVG charts generated, public CSV snapshots copied to `docs/generated/`, and 8 tests pass.
+- Evidence: 16 predictions, 32 tournament teams, valid advancement probability totals, dashboard generated, README SVG charts generated, public CSV snapshots copied to `docs/generated/`, 8 tests pass, and GitHub visibility is `PUBLIC`.
 - Risks / rollback: The Odds API live blending is unverified until a user-owned key is added; scorer/buteur modeling remains intentionally disabled until structured player inputs exist.
 - Follow-ups: add `THE_ODDS_API_KEY` locally, refresh once to verify quota headers/matched markets, then consider API-Football for lineups/injuries.
