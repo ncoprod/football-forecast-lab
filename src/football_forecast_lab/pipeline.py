@@ -21,6 +21,7 @@ from .settings import (
 )
 from .tournament import simulate_tournament
 from .trained_layer import enrich_predictions_with_ml
+from .utils import parse_dt
 
 
 def load_round_of_32_events(scoreboard: dict) -> list[dict]:
@@ -67,7 +68,9 @@ def main() -> None:
     predictions = []
     for event in round_events:
         event_id = str(event["id"])
-        external_market = optional_odds.get("matched_markets", {}).get(event_id)
+        match_dt = parse_dt(event.get("date"))
+        is_pre_match = bool(match_dt and generated_at < match_dt)
+        external_market = optional_odds.get("matched_markets", {}).get(event_id) if is_pre_match else None
         predictions.append(
             predict_match(
                 event,
@@ -77,6 +80,7 @@ def main() -> None:
                 league_news,
                 config,
                 external_market,
+                generated_at,
             )
         )
 

@@ -14,6 +14,7 @@ def build_dashboard(audit_path: Path, output_path: Path) -> None:
     rows = "\n".join(
         "<tr>"
         f"<td>{html.escape(pred['match_paris'])}</td>"
+        f"<td>{html.escape(pred['forecast_status'])}</td>"
         f"<td>{html.escape(pred['match'])}</td>"
         f"<td>{html.escape(pred['recommended_result'])}</td>"
         f"<td>{pred['recommended_result_probability'] * 100:.1f}%</td>"
@@ -66,7 +67,7 @@ def render_html(match_rows: str, champion_rows: str) -> str:
   <h1>Football Forecast Lab</h1>
   <h2>Pronostics scores</h2>
   <table>
-    <thead><tr><th>Date</th><th>Match</th><th>Resultat</th><th>P(resultat)</th><th>Score</th><th>P(score)</th><th>Home</th><th>Nul</th><th>Away</th></tr></thead>
+    <thead><tr><th>Date</th><th>Statut</th><th>Match</th><th>Resultat</th><th>P(resultat)</th><th>Score</th><th>P(score)</th><th>Home</th><th>Nul</th><th>Away</th></tr></thead>
     <tbody>{match_rows}</tbody>
   </table>
   <h2>Simulation champion</h2>

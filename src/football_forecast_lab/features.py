@@ -14,6 +14,7 @@ def prediction_feature_rows(predictions: list[dict[str, Any]]) -> list[dict[str,
             {
                 "event_id": pred["event_id"],
                 "match_paris": pred["match_paris"],
+                "forecast_status": pred["forecast_status"],
                 "home": home,
                 "away": away,
                 "home_elo": pred["elo_home"].get("rating"),

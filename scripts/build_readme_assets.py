@@ -173,11 +173,11 @@ def build_results_markdown(audit: dict[str, Any], ml_result: dict[str, Any], inc
     lines.append("")
     lines.append("## Match Forecasts")
     lines.append("")
-    lines.append("| Match | Result | P(result) | Exact score | P(score) |")
-    lines.append("|---|---|---:|---:|---:|")
+    lines.append("| Match | Status | Result | P(result) | Exact score | P(score) |")
+    lines.append("|---|---|---|---:|---:|---:|")
     for pred in audit["predictions"]:
         lines.append(
-            f"| {pred['match']} | {pred['recommended_result']} | "
+            f"| {pred['match']} | {pred['forecast_status']} | {pred['recommended_result']} | "
             f"{pct(pred['recommended_result_probability'])} | {pred['recommended_score']} | "
             f"{pct(pred['recommended_exact_probability'])} |"
         )

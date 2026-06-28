@@ -63,6 +63,7 @@ def write_outputs(
             f,
             fieldnames=[
                 "match_paris",
+                "forecast_status",
                 "match",
                 "resultat_recommande",
                 "p_resultat_recommande",
@@ -89,6 +90,7 @@ def write_outputs(
             writer.writerow(
                 {
                     "match_paris": pred["match_paris"],
+                    "forecast_status": pred["forecast_status"],
                     "match": pred["match"],
                     "resultat_recommande": pred["recommended_result"],
                     "p_resultat_recommande": pct(pred["recommended_result_probability"]),
@@ -185,14 +187,15 @@ def build_report(
     lines.append("")
     lines.append("## Synthese rapide")
     lines.append("")
-    lines.append("| Date Paris | Match | Resultat | P(resultat) | Score exact | P(score) | Confiance |")
-    lines.append("|---|---|---|---:|---:|---:|---|")
+    lines.append("| Date Paris | Statut | Match | Resultat | P(resultat) | Score exact | P(score) | Confiance |")
+    lines.append("|---|---|---|---|---:|---:|---:|---|")
     for pred in predictions:
         lines.append(
             "| "
             + " | ".join(
                 [
                     pred["match_paris"],
+                    pred["forecast_status"],
                     pred["match"],
                     pred["recommended_result"],
                     pct(pred["recommended_result_probability"]),
@@ -241,6 +244,9 @@ def build_report(
         away_name = pred["away"]["name"]
         lines.append(f"### {pred['match_paris']} - {home_name} vs {away_name}")
         lines.append("")
+        if pred.get("forecast_warning"):
+            lines.append(f"Attention: {pred['forecast_warning']}")
+            lines.append("")
         lines.append(
             f"Resultat recommande: **{pred['recommended_result']}** "
             f"({pct(pred['recommended_result_probability'])})."

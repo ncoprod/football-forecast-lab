@@ -19,6 +19,8 @@ def validate_outputs(output_dir: Path) -> None:
         raise AssertionError("Missing optional odds source audit")
     if "trained_ml" not in audit:
         raise AssertionError("Missing trained ML audit")
+    if any("forecast_status" not in prediction for prediction in predictions):
+        raise AssertionError("Missing forecast status on at least one prediction")
 
     expected_round_totals = {
         "reach_r16": 16.0,

@@ -200,11 +200,13 @@ def predict_match(
     league_news: dict[str, Any],
     config: dict[str, Any],
     external_market: dict[str, Any] | None = None,
+    generated_at: datetime | None = None,
 ) -> dict[str, Any]:
     competitors = event_competitors(event)
     home = competitors["home"]
     away = competitors["away"]
     match_dt = parse_dt(event.get("date"))
+    is_pre_match = bool(match_dt and generated_at and generated_at < match_dt)
     odds = extract_odds(event, summary)
     odds = merge_external_odds(odds, external_market, home["name"], away["name"])
     market_lam_home, market_lam_away, fit_info = fit_market_lambdas(odds)
@@ -242,6 +244,8 @@ def predict_match(
         "event_id": str(event.get("id")),
         "match_utc": match_dt.isoformat() if match_dt else "",
         "match_paris": match_dt.astimezone(PARIS_TZ).strftime("%Y-%m-%d %H:%M") if match_dt else "",
+        "forecast_status": "pre_match" if is_pre_match else "after_kickoff_or_unknown",
+        "forecast_warning": "" if is_pre_match else "Not a clean pre-match forecast; do not use for pre-match backtests or staking.",
         "home": home,
         "away": away,
         "match": f"{home['name']} - {away['name']}",
