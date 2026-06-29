@@ -1,42 +1,42 @@
 # Latest Public Forecast Snapshot
 
-Generated UTC: `2026-06-29T18:58:57.034951+00:00`
+Generated UTC: `2026-06-29T23:12:14.070120+00:00`
 
 ## Match Forecasts
 
 | Match | Status | Result 90 | P(result) | Score 90 | P(score) |
 |---|---|---|---:|---:|---:|
 | South Africa - Canada | after_kickoff_or_unknown | Canada gagne | 36.2% | 1-1 | 14.1% |
-| Brazil - Japan | after_kickoff_or_unknown | Brazil gagne | 54.3% | 1-0 | 13.7% |
-| Germany - Paraguay | pre_match | Germany gagne | 71.0% | 2-0 | 13.3% |
-| Netherlands - Morocco | pre_match | Netherlands gagne | 42.9% | 1-1 | 14.0% |
-| Ivory Coast - Norway | pre_match | Norway gagne | 45.2% | 1-1 | 13.2% |
-| France - Sweden | pre_match | France gagne | 77.5% | 2-0 | 11.9% |
+| Brazil - Japan | after_kickoff_or_unknown | Brazil gagne | 40.4% | 1-1 | 14.0% |
+| Germany - Paraguay | after_kickoff_or_unknown | Germany gagne | 70.4% | 2-0 | 12.9% |
+| Netherlands - Morocco | pre_match | Netherlands gagne | 42.4% | 1-1 | 13.9% |
+| Ivory Coast - Norway | pre_match | Norway gagne | 46.3% | 1-1 | 13.1% |
+| France - Sweden | pre_match | France gagne | 77.6% | 2-0 | 11.9% |
 | Mexico - Ecuador | pre_match | Mexico gagne | 46.4% | 1-0 | 16.5% |
-| England - Congo DR | pre_match | England gagne | 73.6% | 2-0 | 15.6% |
+| England - Congo DR | pre_match | England gagne | 73.5% | 2-0 | 15.7% |
 | Belgium - Senegal | pre_match | Belgium gagne | 42.6% | 1-1 | 13.9% |
-| United States - Bosnia-Herzegovina | pre_match | United States gagne | 67.1% | 2-0 | 13.0% |
+| United States - Bosnia-Herzegovina | pre_match | United States gagne | 67.2% | 2-0 | 12.9% |
 | Spain - Austria | pre_match | Spain gagne | 72.3% | 2-0 | 14.6% |
-| Portugal - Croatia | pre_match | Portugal gagne | 52.1% | 1-1 | 12.9% |
-| Switzerland - Algeria | pre_match | Switzerland gagne | 52.7% | 1-1 | 12.9% |
+| Portugal - Croatia | pre_match | Portugal gagne | 53.2% | 1-1 | 12.8% |
+| Switzerland - Algeria | pre_match | Switzerland gagne | 52.5% | 1-0 | 13.1% |
 | Australia - Egypt | pre_match | Egypt gagne | 38.4% | 0-0 | 15.2% |
-| Argentina - Cape Verde | pre_match | Argentina gagne | 82.1% | 2-0 | 16.1% |
-| Colombia - Ghana | pre_match | Colombia gagne | 63.6% | 1-0 | 15.3% |
+| Argentina - Cape Verde | pre_match | Argentina gagne | 82.3% | 2-0 | 16.0% |
+| Colombia - Ghana | pre_match | Colombia gagne | 64.5% | 1-0 | 15.5% |
 
 ## Tournament Simulation
 
 | Rank | Team | Champion | Final | Semi |
 |---:|---|---:|---:|---:|
-| 1 | Argentina | 25.0% | 38.9% | 66.1% |
-| 2 | France | 19.6% | 29.8% | 47.8% |
-| 3 | Spain | 18.3% | 34.7% | 52.0% |
-| 4 | Germany | 10.7% | 25.4% | 48.6% |
-| 5 | Brazil | 6.4% | 16.1% | 32.1% |
-| 6 | England | 6.2% | 12.3% | 25.5% |
-| 7 | Portugal | 3.8% | 10.1% | 19.6% |
-| 8 | Netherlands | 2.2% | 4.7% | 10.9% |
-| 9 | Mexico | 2.0% | 4.6% | 11.3% |
-| 10 | Colombia | 1.4% | 4.3% | 16.0% |
+| 1 | Argentina | 25.9% | 39.2% | 66.1% |
+| 2 | France | 19.7% | 29.3% | 47.4% |
+| 3 | Spain | 19.6% | 36.9% | 51.6% |
+| 4 | Germany | 8.0% | 21.5% | 46.0% |
+| 5 | England | 6.5% | 12.3% | 25.7% |
+| 6 | Brazil | 4.8% | 12.6% | 26.4% |
+| 7 | Portugal | 4.4% | 11.6% | 20.2% |
+| 8 | Netherlands | 2.2% | 4.6% | 10.6% |
+| 9 | Mexico | 2.1% | 4.7% | 11.5% |
+| 10 | Colombia | 1.5% | 4.4% | 16.2% |
 
 ## Historical ML Backtest
 
