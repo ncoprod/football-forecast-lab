@@ -5,7 +5,7 @@ Final scores are joined from a separate immutable results ledger; pre-match pred
 
 Ledger: `C:\Users\nicoc\Documents\Codex\2026-06-28\je\outputs\ledger\pre_match_predictions.jsonl`
 Results: `C:\Users\nicoc\Documents\Codex\2026-06-28\je\outputs\ledger\resolved_results.jsonl`
-Rows: `90` across `15` events; resolved rows: `0` across `0` events; pending rows: `90` across `15` events.
+Rows: `118` across `15` events; resolved rows: `0` across `0` events; pending rows: `118` across `15` events.
 
 ## Ledger Metrics
 
