@@ -12,6 +12,9 @@ def main() -> None:
     for script_name in (
         "refresh_once.py",
         "resolve_results.py",
+        "analyze_odds_movement.py",
+        "build_availability_report.py",
+        "build_market_edges.py",
         "backtest_models.py",
         "calibrate_models.py",
         "paper_bet.py",

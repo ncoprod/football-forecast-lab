@@ -27,3 +27,17 @@
 - Prevention rule: separate `enter_mpp` decisions from `no_bet_reason`; no-bet only controls money exposure.
 - Example: a pre-match row can be `enter_mpp` and still have `edge_below_threshold` for staking.
 - Date: 2026-06-29
+
+## Broad news noise
+- Mistake: treating broad tournament news as team-specific injury or lineup risk.
+- Trigger: ESPN summary/news can include World Cup-wide stories beside match data.
+- Prevention rule: count risk terms only when the headline or URL explicitly mentions one of the two teams.
+- Example: generic "fitness" or "knockout stages" headlines should not penalize every match.
+- Date: 2026-06-29
+
+## CSV report fields
+- Mistake: internal analysis fields caused public CSV writers to fail.
+- Trigger: report rows keep helper fields such as `decision_rank`, `home`, or `away` that are not in the public fieldnames.
+- Prevention rule: either include all fields deliberately or set `extrasaction="ignore"` on report-only `DictWriter`s.
+- Example: market-edge CSV publishes `decision`, not the internal sort key.
+- Date: 2026-06-29

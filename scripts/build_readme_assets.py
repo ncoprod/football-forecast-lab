@@ -50,6 +50,12 @@ def publish_csv_outputs() -> None:
         "ml_training_report.md",
         "mpp_picks_current.csv",
         "mpp_picks_current.md",
+        "odds_movement_current.csv",
+        "odds_movement_current.md",
+        "availability_report_current.csv",
+        "availability_report_current.md",
+        "market_edges_current.csv",
+        "market_edges_current.md",
     ):
         src = OUTPUT_DIR / name
         if src.exists():
@@ -229,6 +235,11 @@ def build_results_markdown(audit: dict[str, Any], ml_result: dict[str, Any], inc
         lines.append("## Resolved Results")
         lines.append("")
         lines.append("Resolved final scores used for live evaluation are published in [`docs/generated/resolved_results.csv`](docs/generated/resolved_results.csv).")
+        lines.append("")
+    if (GENERATED_DIR / "market_edges_current.md").exists():
+        lines.append("## Market Discipline")
+        lines.append("")
+        lines.append("Market-edge candidates, odds movement and availability coverage are published in [`docs/generated/market_edges_current.md`](docs/generated/market_edges_current.md), [`docs/generated/odds_movement_current.md`](docs/generated/odds_movement_current.md) and [`docs/generated/availability_report_current.md`](docs/generated/availability_report_current.md).")
         lines.append("")
     return "\n".join(lines)
 
