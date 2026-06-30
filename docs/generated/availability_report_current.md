@@ -1,6 +1,6 @@
 # Availability Report Current
 
-Generated UTC: `2026-06-29T23:12:14.070120+00:00`
+Generated UTC: `2026-06-30T18:16:38.747411+00:00`
 
 This report is a coverage audit, not a medical claim. Missing lineups lower confidence and trigger manual checks.
 
@@ -9,8 +9,8 @@ This report is a coverage audit, not a medical claim. Missing lineups lower conf
 | South Africa - Canada | espn_rosters_available | 25/25 | 0 | 0 | 2.0% | ok/no action |
 | Brazil - Japan | espn_rosters_available | 25/26 | 0 | 0 | 2.0% | ok/no action |
 | Germany - Paraguay | espn_rosters_available | 25/25 | 0 | 0 | 2.0% | ok/no action |
-| Netherlands - Morocco | missing_structured_player_data | 0/0 | 0 | 0 | 5.0% | manual lineup check |
-| Ivory Coast - Norway | missing_structured_player_data | 0/0 | 0 | 0 | 5.0% | manual lineup check |
+| Netherlands - Morocco | espn_rosters_available | 26/26 | 0 | 0 | 2.0% | ok/no action |
+| Ivory Coast - Norway | espn_rosters_available | 26/26 | 0 | 0 | 2.0% | ok/no action |
 | France - Sweden | missing_structured_player_data | 0/0 | 0 | 0 | 5.0% | manual lineup check |
 | Mexico - Ecuador | missing_structured_player_data | 0/0 | 0 | 0 | 5.0% | manual lineup check |
 | England - Congo DR | missing_structured_player_data | 0/0 | 0 | 0 | 5.0% | manual lineup check |
